@@ -1,0 +1,23 @@
+{
+  "name": "claude-code-usage",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Interactive simulator estimating how long Claude Code credits last on each subscription plan",
+  "homepage": "https://alegauss.github.io/claude-code-usage/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alegauss/claude-code-usage.git"
+  },
+  "license": "Apache-2.0",
+  "scripts": {
+    "serve": "node tools/serve.mjs",
+    "check": "npm run check:palette && npm run check:page",
+    "check:palette": "node tools/check-palette.mjs",
+    "check:page": "node tools/verify-page.mjs",
+    "shots": "node tools/verify-page.mjs --shots"
+  },
+  "devDependencies": {
+    "playwright": "^1.62.1"
+  }
+}

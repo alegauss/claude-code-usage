@@ -1,0 +1,1842 @@
+<title>Claude Code usage simulator</title>
+<style>
+  :root {
+    color-scheme: light;
+    --ground: #f4f6f9;
+    --surface: #ffffff;
+    --surface-2: #eef1f6;
+    --surface-3: #e6ebf3;
+    --ink: #0d1117;
+    --ink-2: #58616f;
+    --ink-3: #858e9d;
+    --line: #e0e5ec;
+    --line-strong: #c7cfdb;
+
+    --plan-1: #86b6ef;
+    --plan-2: #3987e5;
+    --plan-3: #256abf;
+    --plan-4: #104281;
+
+    --accent: #256abf;
+    --accent-ink: #ffffff;
+    --accent-wash: #e9f1fc;
+    --muted-mark: #c2cad6;
+
+    --good: #0a7d0a;
+    --warn: #a86e00;
+    --crit: #c62f2f;
+
+    --shadow-sm: 0 1px 2px rgba(13, 17, 23, .05);
+    --shadow-md: 0 1px 2px rgba(13, 17, 23, .05), 0 12px 28px -16px rgba(13, 17, 23, .28);
+
+    --font-display: "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --font-body: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --font-mono: ui-monospace, "Cascadia Mono", "Cascadia Code", Consolas, "SF Mono", Menlo, monospace;
+
+    --rail-w: 88px;
+    --console-h: 216px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --ground: #0d1014;
+      --surface: #171b22;
+      --surface-2: #1e242d;
+      --surface-3: #252c37;
+      --ink: #eef1f6;
+      --ink-2: #a4adbd;
+      --ink-3: #79828f;
+      --line: #272e39;
+      --line-strong: #3a4350;
+
+      --plan-1: #1c5cab;
+      --plan-2: #2a78d6;
+      --plan-3: #5598e7;
+      --plan-4: #9ec5f4;
+
+      --accent: #5598e7;
+      --accent-ink: #0d1014;
+      --accent-wash: #1a2836;
+      --muted-mark: #3d4653;
+
+      --good: #34b334;
+      --warn: #d99b1a;
+      --crit: #e06464;
+
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, .4);
+      --shadow-md: 0 1px 2px rgba(0, 0, 0, .4), 0 12px 28px -16px rgba(0, 0, 0, .7);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --ground: #0d1014;
+    --surface: #171b22;
+    --surface-2: #1e242d;
+    --surface-3: #252c37;
+    --ink: #eef1f6;
+    --ink-2: #a4adbd;
+    --ink-3: #79828f;
+    --line: #272e39;
+    --line-strong: #3a4350;
+
+    --plan-1: #1c5cab;
+    --plan-2: #2a78d6;
+    --plan-3: #5598e7;
+    --plan-4: #9ec5f4;
+
+    --accent: #5598e7;
+    --accent-ink: #0d1014;
+    --accent-wash: #1a2836;
+    --muted-mark: #3d4653;
+
+    --good: #34b334;
+    --warn: #d99b1a;
+    --crit: #e06464;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, .4);
+    --shadow-md: 0 1px 2px rgba(0, 0, 0, .4), 0 12px 28px -16px rgba(0, 0, 0, .7);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; }
+
+  .deck {
+    display: grid;
+    grid-template-columns: var(--rail-w) minmax(0, 1fr);
+    min-height: 100vh;
+  }
+
+  /* ---------- navigation rail ---------- */
+  .rail {
+    border-right: 1px solid var(--line);
+    background: var(--surface);
+    padding: 28px 0 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+  }
+  .rail-mark {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: .16em;
+    color: var(--ink-3);
+    writing-mode: vertical-rl;
+    margin-bottom: 18px;
+    text-transform: uppercase;
+  }
+  .rail-btn {
+    appearance: none;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    width: 100%;
+    padding: 7px 0;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--ink-3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    position: relative;
+  }
+  .rail-btn::before {
+    content: "";
+    width: 3px;
+    height: 14px;
+    border-radius: 2px;
+    background: var(--line-strong);
+    transition: background .18s, height .18s;
+  }
+  .rail-btn:hover { color: var(--ink); }
+  .rail-btn[aria-current="true"] { color: var(--ink); font-weight: 700; }
+  .rail-btn[aria-current="true"]::before { background: var(--accent); height: 22px; }
+  .rail-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .rail-theme {
+    margin-top: auto;
+    appearance: none;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--surface-2);
+    color: var(--ink-2);
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: .1em;
+    padding: 7px 10px;
+  }
+  .rail-theme:hover { color: var(--ink); border-color: var(--line-strong); }
+  .rail-theme:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ---------- stage ---------- */
+  .stage {
+    padding: 56px 48px calc(48px + var(--console-h));
+    max-width: 1180px;
+    width: 100%;
+  }
+  body:not(.sim-mode) .stage { padding-bottom: 72px; }
+
+  .slide { display: none; animation: rise .34s ease both; }
+  .slide.is-active { display: block; }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .slide { animation: none; }
+    * { transition: none !important; }
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 14px;
+  }
+  .slide h2 {
+    font-size: clamp(26px, 3.4vw, 40px);
+    font-weight: 700;
+    letter-spacing: -.022em;
+    line-height: 1.12;
+    max-width: 22ch;
+  }
+  .lede {
+    color: var(--ink-2);
+    font-size: 17px;
+    max-width: 62ch;
+    margin: 16px 0 0;
+  }
+
+  /* ---------- cover ---------- */
+  .cover { padding-top: 4vh; }
+  .cover h1 {
+    font-size: clamp(38px, 6.2vw, 76px);
+    font-weight: 700;
+    letter-spacing: -.035em;
+    line-height: 1.02;
+    max-width: 16ch;
+  }
+  .cover h1 em {
+    font-style: normal;
+    color: var(--accent);
+  }
+  .cover .lede { font-size: 19px; margin-top: 26px; }
+  .cover-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 36px;
+  }
+  .chip {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    border-radius: 999px;
+    padding: 6px 13px;
+    color: var(--ink-2);
+  }
+  .chip b { color: var(--ink); font-weight: 700; }
+
+  /* ---------- generic blocks ---------- */
+  .grid { display: grid; gap: 18px; margin-top: 34px; }
+  .g2 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+  .g3 { grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+  .g4 { grid-template-columns: repeat(auto-fit, minmax(212px, 1fr)); }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: var(--shadow-sm);
+  }
+  .card h3 {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -.01em;
+    margin-bottom: 8px;
+  }
+  .card p { margin: 0; color: var(--ink-2); font-size: 14.5px; }
+  .card p + p { margin-top: 10px; }
+
+  .step-n {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--ink-3);
+    letter-spacing: .1em;
+    display: block;
+    margin-bottom: 10px;
+  }
+
+  code, .mono { font-family: var(--font-mono); }
+
+  .formula {
+    margin-top: 26px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px;
+    padding: 18px 20px;
+    font-family: var(--font-mono);
+    font-size: 14px;
+    line-height: 1.9;
+    color: var(--ink);
+    overflow-x: auto;
+  }
+  .formula .op { color: var(--ink-3); }
+  .formula .note { color: var(--ink-2); font-size: 12.5px; display: block; margin-top: 10px; }
+
+  .note-box {
+    margin-top: 26px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface-2);
+    padding: 16px 18px;
+    font-size: 14px;
+    color: var(--ink-2);
+  }
+  .note-box strong { color: var(--ink); }
+  .note-box.warn { border-left: 3px solid var(--warn); }
+
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  .table-wrap { overflow-x: auto; margin-top: 24px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+  th, td { text-align: left; padding: 11px 16px; border-bottom: 1px solid var(--line); }
+  thead th {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    font-weight: 500;
+    background: var(--surface-2);
+  }
+  tbody tr:last-child td { border-bottom: 0; }
+  td.num, th.num { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+  /* ---------- plan cards ---------- */
+  .plan {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 18px;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .plan-head { display: flex; align-items: center; gap: 9px; }
+  .swatch { width: 11px; height: 11px; border-radius: 3px; flex: none; box-shadow: 0 0 0 1px rgba(128,128,128,.25); }
+  .plan-name { font-family: var(--font-mono); font-size: 13px; font-weight: 700; letter-spacing: .01em; }
+  .plan-price { font-family: var(--font-mono); font-size: 12px; color: var(--ink-3); margin-left: auto; }
+  .plan-figure {
+    font-family: var(--font-display);
+    font-size: 42px;
+    font-weight: 700;
+    letter-spacing: -.03em;
+    line-height: 1;
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+  }
+  .plan-figure span { font-size: 13px; font-weight: 500; color: var(--ink-2); font-family: var(--font-body); letter-spacing: 0; }
+  .meter { height: 8px; border-radius: 4px; background: var(--surface-3); overflow: hidden; }
+  .meter i { display: block; height: 100%; border-radius: 4px; transition: width .3s ease; }
+  .plan-rows { display: grid; gap: 5px; font-size: 13px; }
+  .plan-rows div { display: flex; justify-content: space-between; gap: 12px; color: var(--ink-2); }
+  .plan-rows b { font-family: var(--font-mono); font-variant-numeric: tabular-nums; color: var(--ink); font-weight: 600; }
+  .verdict {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: .05em;
+    padding: 4px 8px;
+    border-radius: 4px;
+    align-self: flex-start;
+    text-transform: uppercase;
+  }
+  .verdict.ok { background: color-mix(in srgb, var(--good) 14%, transparent); color: var(--good); }
+  .verdict.tight { background: color-mix(in srgb, var(--warn) 16%, transparent); color: var(--warn); }
+  .verdict.short { background: color-mix(in srgb, var(--crit) 14%, transparent); color: var(--crit); }
+
+  /* ---------- charts ---------- */
+  .chart-block { margin-top: 28px; }
+  .chart-frame {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 18px 18px 12px;
+    position: relative;
+    box-shadow: var(--shadow-sm);
+  }
+  .chart-frame svg { width: 100%; height: auto; display: block; }
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 20px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--ink-2);
+  }
+  .legend span { display: inline-flex; align-items: center; gap: 7px; }
+
+  .tip {
+    position: absolute;
+    pointer-events: none;
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    border-radius: 7px;
+    box-shadow: var(--shadow-md);
+    padding: 9px 11px;
+    font-size: 12.5px;
+    line-height: 1.5;
+    min-width: 130px;
+    opacity: 0;
+    transform: translate(-50%, -112%);
+    transition: opacity .12s;
+    z-index: 5;
+  }
+  .tip.on { opacity: 1; }
+  .tip .tip-t { font-family: var(--font-mono); font-weight: 700; font-size: 12px; margin-bottom: 4px; display: block; }
+  .tip .tip-r { display: flex; justify-content: space-between; gap: 14px; color: var(--ink-2); }
+  .tip .tip-r b { font-family: var(--font-mono); font-variant-numeric: tabular-nums; color: var(--ink); font-weight: 600; }
+
+  .table-toggle {
+    appearance: none;
+    background: none;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    color: var(--ink-2);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: .06em;
+    padding: 6px 11px;
+    margin-top: 14px;
+    cursor: pointer;
+  }
+  .table-toggle:hover { color: var(--ink); border-color: var(--line-strong); }
+  .table-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ---------- control console ---------- */
+  .console {
+    position: fixed;
+    left: var(--rail-w);
+    right: 0;
+    bottom: 0;
+    background: color-mix(in srgb, var(--surface) 92%, transparent);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid var(--line);
+    padding: 11px 48px;
+    display: none;
+    gap: 10px 22px;
+    align-items: center;
+    flex-wrap: wrap;
+    z-index: 20;
+  }
+  body.sim-mode .console { display: flex; }
+  .ctl { display: flex; flex-direction: column; gap: 6px; min-width: 168px; }
+  .ctl > label,
+  .ctl > .ctl-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .ctl > label b, .ctl > .ctl-label b { color: var(--ink); font-weight: 700; letter-spacing: 0; font-size: 11.5px; }
+
+  input[type="range"] {
+    appearance: none;
+    width: 100%;
+    height: 20px;
+    background: none;
+    cursor: pointer;
+    margin: 0;
+  }
+  input[type="range"]::-webkit-slider-runnable-track {
+    height: 4px; border-radius: 2px; background: var(--surface-3);
+  }
+  input[type="range"]::-moz-range-track { height: 4px; border-radius: 2px; background: var(--surface-3); }
+  input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
+    width: 15px; height: 15px; border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid var(--surface);
+    margin-top: -5.5px;
+    box-shadow: var(--shadow-sm);
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 15px; height: 15px; border-radius: 50%; border: 2px solid var(--surface);
+    background: var(--accent); box-shadow: var(--shadow-sm);
+  }
+  input[type="range"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+
+  .seg { display: flex; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; background: var(--surface-2); }
+  .seg button {
+    appearance: none;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    padding: 6px 9px;
+    color: var(--ink-2);
+    flex: 1;
+    border-right: 1px solid var(--line);
+    white-space: nowrap;
+  }
+  .seg button:last-child { border-right: 0; }
+  .seg button:hover { color: var(--ink); background: var(--surface-3); }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
+  .seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
+
+  .ctl.off { opacity: .4; }
+  .ctl.off input { pointer-events: none; }
+
+  .console-reset {
+    margin-left: auto;
+    appearance: none;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    border-radius: 7px;
+    color: var(--ink-2);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: .08em;
+    padding: 8px 12px;
+    cursor: pointer;
+  }
+  .console-reset:hover { color: var(--ink); border-color: var(--line-strong); }
+  .console-reset:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ---------- footer navigation ---------- */
+  .nav {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 44px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+  }
+  .nav button {
+    appearance: none;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    border-radius: 7px;
+    padding: 8px 15px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .nav button:hover:not(:disabled) { border-color: var(--line-strong); background: var(--surface-2); }
+  .nav button:disabled { opacity: .38; cursor: default; }
+  .nav button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .nav .count { margin-left: auto; font-family: var(--font-mono); font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+
+  .lever { display: flex; gap: 14px; align-items: flex-start; }
+  .lever-k {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent);
+    background: var(--accent-wash);
+    border-radius: 5px;
+    padding: 3px 7px;
+    flex: none;
+    white-space: nowrap;
+  }
+
+  @media (max-width: 860px) {
+    :root { --rail-w: 0px; --console-h: 230px; }
+    .deck { grid-template-columns: 1fr; }
+    .rail {
+      position: static; height: auto; flex-direction: row; overflow-x: auto;
+      border-right: 0; border-bottom: 1px solid var(--line); padding: 10px 14px; gap: 2px;
+    }
+    .rail-mark { display: none; }
+    .rail-btn { width: auto; padding: 6px 9px; }
+    .rail-btn::before { display: none; }
+    .rail-theme { margin-left: auto; }
+    .stage { padding: 32px 20px calc(28px + var(--console-h)); }
+    .console { left: 0; padding: 12px 20px; gap: 14px; }
+    .ctl { min-width: 140px; flex: 1 1 160px; }
+    .console-reset { margin-left: 0; }
+  }
+</style>
+
+<div class="deck">
+  <nav class="rail" aria-label="Slide navigation">
+    <span class="rail-mark">Slides</span>
+    <button class="rail-btn" data-go="0" aria-current="true">01</button>
+    <button class="rail-btn" data-go="1">02</button>
+    <button class="rail-btn" data-go="2">03</button>
+    <button class="rail-btn" data-go="3">04</button>
+    <button class="rail-btn" data-go="4">05</button>
+    <button class="rail-btn" data-go="5">06</button>
+    <button class="rail-btn" data-go="6">07</button>
+    <button class="rail-btn" data-go="7">08</button>
+    <button class="rail-btn" data-go="8">09</button>
+    <button class="rail-theme" id="themeBtn" type="button">THEME</button>
+  </nav>
+
+  <main class="stage">
+
+    <!-- 01 — cover -->
+    <section class="slide cover is-active" data-sim="0">
+      <p class="eyebrow">Usage simulation</p>
+      <h1>How long before <em>Claude Code</em> burns through your plan?</h1>
+      <p class="lede">
+        Set how many tasks you run a day, how hard the agent thinks, how much context each call
+        carries, and whether the work fans out across agents. The simulation recomputes the cost
+        per task and shows how many days each plan — Free, Pro, Max 5x and Max 20x — survives.
+      </p>
+      <div class="cover-meta">
+        <span class="chip"><b>4</b> plans</span>
+        <span class="chip"><b>5</b> effort levels</span>
+        <span class="chip"><b>3</b> models</span>
+        <span class="chip"><b>solo · workflow · ultracode</b></span>
+        <span class="chip"><b>10k–500k</b> context tokens</span>
+      </div>
+      <div class="note-box warn">
+        <strong>Read this before you act on it.</strong> Subscription plans do not expose a dollar
+        balance. What they have are usage limits on a rolling 5-hour window plus a weekly cap.
+        This simulation converts consumption into equivalent API spend at list prices and compares
+        it against an estimated monthly budget per plan — a model for comparing scenarios, not
+        Anthropic's billing policy.
+      </div>
+      <div class="nav">
+        <button type="button" data-nav="-1" disabled>← Back</button>
+        <button type="button" data-nav="1">Next →</button>
+        <span class="count"><b class="cur">01</b> / 09</span>
+      </div>
+    </section>
+
+    <!-- 02 — the model -->
+    <section class="slide" data-sim="0">
+      <p class="eyebrow">The model</p>
+      <h2>A task is not one call. It's dozens.</h2>
+      <p class="lede">
+        When the agent works a task it reads files, runs commands, fixes and verifies. Every turn
+        of that loop is a model call — and every call resends the context accumulated so far.
+        That is where almost all of the spend comes from.
+      </p>
+
+      <div class="grid g3">
+        <div class="card">
+          <span class="step-n">GOES IN</span>
+          <h3>Context per call</h3>
+          <p>Conversation history, files read, tool output. It grows as the task proceeds and is
+            resent in full on every turn.</p>
+        </div>
+        <div class="card">
+          <span class="step-n">MULTIPLIES</span>
+          <h3>Effort level</h3>
+          <p>Sets how much the model reasons and how many tool turns it takes. From <code>low</code>
+            to <code>max</code>, calls per task grow about 8×.</p>
+        </div>
+        <div class="card">
+          <span class="step-n">COMES OUT</span>
+          <h3>Output tokens</h3>
+          <p>Reasoning, prose and code edits. They cost 5× what input costs — and they grow with
+            effort too.</p>
+        </div>
+      </div>
+
+      <div class="formula">
+        chain_cost <span class="op">=</span> calls <span class="op">×</span> (
+        context <span class="op">×</span> input_price <span class="op">×</span> cache_factor
+        <span class="op">+</span> output <span class="op">×</span> output_price )
+        <span class="note">cache_factor = 0.2475 — assuming 85% cache reads (0.1×), 10% fresh input (1.0×) and 5% cache writes (1.25×).</span>
+      </div>
+
+      <div class="formula">
+        task_cost <span class="op">=</span> phases <span class="op">×</span> (
+        chain_cost <span class="op">× 0.45</span>
+        <span class="op">+</span> agents <span class="op">×</span> chain_cost <span class="op">× 0.70</span> )
+        <span class="note">The coordinator spends about 45% of a full chain (plans, delegates, synthesizes);
+          each agent runs its own chain, with its own context, slightly leaner.
+          <code>solo</code> = 1 chain · <code>workflow</code> = 1 phase · <code>ultracode</code> = 3 chained phases and a minimum effort of <code>xhigh</code>.</span>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <caption class="mono" style="caption-side:top;text-align:left;padding:11px 16px;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3);">Parameters per effort level</caption>
+          <thead>
+            <tr>
+              <th>Effort</th>
+              <th class="num">Calls / task</th>
+              <th class="num">Output tokens / call</th>
+              <th>Typical use</th>
+            </tr>
+          </thead>
+          <tbody id="effortTable"></tbody>
+        </table>
+      </div>
+
+      <div class="nav">
+        <button type="button" data-nav="-1">← Back</button>
+        <button type="button" data-nav="1">Next →</button>
+        <span class="count"><b class="cur">02</b> / 09</span>
+      </div>
+    </section>
+
+    <!-- 03 — the plans -->
+    <section class="slide" data-sim="0">
+      <p class="eyebrow">The plans</p>
+      <h2>What monthly budget each subscription stands for</h2>
+      <p class="lede">
+        Anthropic does not publish a dollar figure per plan. The numbers below are this
+        simulation's premise: the equivalent monthly consumption, at API list prices, that each
+        subscription tends to accommodate. Substitute your own if experience says otherwise.
+      </p>
+
+      <div class="grid g4" id="planIntro"></div>
+
+      <div class="note-box warn">
+        <strong>What the model does not capture.</strong> Plans meter usage in rolling 5-hour
+        windows and a weekly cap, not as a balance you spend however you like. In practice that
+        means you can hit a limit on Tuesday morning and be back at work by the afternoon without
+        having "used up the month". And the Free plan does not include Claude Code at all — the
+        figure there is illustrative, purely to keep four plans on the same chart scale.
+      </div>
+
+      <div class="nav">
+        <button type="button" data-nav="-1">← Back</button>
+        <button type="button" data-nav="1">Next →</button>
+        <span class="count"><b class="cur">03</b> / 09</span>
+      </div>
+    </section>
+
+    <!-- 04 — simulator panel -->
+    <section class="slide" data-sim="1">
+      <p class="eyebrow">Simulator · panel</p>
+      <h2>Your scenario, plan by plan</h2>
+      <p class="lede" id="scenarioLine"></p>
+
+      <div class="grid g4" id="planCards"></div>
+
+      <div class="note-box">
+        The bar on each card shows how much of the month is covered: full means the plan lasts the
+        whole <b>30 days</b> at this pace. <b class="mono">covers the month</b> means budget to
+        spare; <b class="mono">cutting it close</b> is 20 to 30 days;
+        <b class="mono">runs out early</b> is under 20.
+      </div>
+
+      <div class="nav">
+        <button type="button" data-nav="-1">← Back</button>
+        <button type="button" data-nav="1">Next →</button>
+        <span class="count"><b class="cur">04</b> / 09</span>
+      </div>
+    </section>
+
+    <!-- 05 — days chart -->
+    <section class="slide" data-sim="1">
+      <p class="eyebrow">Simulator · chart 1</p>
+      <h2>Days before the plan runs dry</h2>
+      <p class="lede">
+        The plan's monthly budget divided by the daily cost of your pace. The dashed line marks the
+        30 days at which the cycle renews — anything past it finishes the month with budget left.
+      </p>
+
+      <div class="chart-block">
+        <div class="chart-frame" id="frameDays">
+          <div class="tip" id="tipDays"></div>
+        </div>
+        <button class="table-toggle" type="button" data-table="tblDays">Show data table</button>
+        <div class="table-wrap" id="tblDays" hidden></div>
+      </div>
+
+      <div class="nav">
+        <button type="button" data-nav="-1">← Back</button>
+        <button type="button" data-nav="1">Next →</button>
+        <span class="count"><b class="cur">05</b> / 09</span>
+      </div>
+    </section>
+
+    <!-- 06 — effort -->
+    <section class="slide" data-sim="1">
+      <p class="eyebrow">Simulator · chart 2</p>
+      <h2>Effort is the expensive lever</h2>
+      <p class="lede">
+        Same context, same model — only the effort level changes. The highlighted bar is what the
+        console has selected; the others show what a task would cost at every other level.
+      </p>
+
+      <div class="chart-block">
+        <div class="chart-frame" id="frameEffort">
+          <div class="tip" id="tipEffort"></div>
+        </div>
+        <button class="table-toggle" type="button" data-table="tblEffort">Show data table</button>
+        <div class="table-wrap" id="tblEffort" hidden></div>
+      </div>
+
+      <div class="nav">
+        <button type="button" data-nav="-1">← Back</button>
+        <button type="button" data-nav="1">Next →</button>
+        <span class="count"><b class="cur">06</b> / 09</span>
+      </div>
+    </section>
+
+    <!-- 07 — execution mode -->
+    <section class="slide" data-sim="1">
+      <p class="eyebrow">Simulator · chart 3</p>
+      <h2>One agent, a swarm, or ultracode</h2>
+      <p class="lede">
+        In <code>solo</code> the task runs as a single loop. A <code>workflow</code> fans out
+        agents in parallel — each with its own context and its own chain of calls.
+        <code>ultracode</code> makes that the default: a workflow on every task, chained across
+        phases, at a minimum effort of <code>xhigh</code>. The axis is logarithmic.
+      </p>
+
+      <div class="chart-block">
+        <div class="chart-frame" id="frameMode">
+          <div class="tip" id="tipMode"></div>
+        </div>
+        <div class="legend" id="legendMode"></div>
+        <button class="table-toggle" type="button" data-table="tblMode">Show data table</button>
+        <div class="table-wrap" id="tblMode" hidden></div>
+      </div>
+
+      <div class="note-box warn" id="modeNote"></div>
+
+      <div class="nav">
+        <button type="button" data-nav="-1">← Back</button>
+        <button type="button" data-nav="1">Next →</button>
+        <span class="count"><b class="cur">07</b> / 09</span>
+      </div>
+    </section>
+
+    <!-- 08 — context -->
+    <section class="slide" data-sim="1">
+      <p class="eyebrow">Simulator · chart 4</p>
+      <h2>Big context shortens the month</h2>
+      <p class="lede">
+        How many days each plan lasts as the average context per call grows, holding effort and
+        pace fixed. The vertical axis is logarithmic — without it, Free and Max 20x would not fit
+        on the same chart.
+      </p>
+
+      <div class="chart-block">
+        <div class="chart-frame" id="frameCtx">
+          <div class="tip" id="tipCtx"></div>
+        </div>
+        <div class="legend" id="legendCtx"></div>
+        <button class="table-toggle" type="button" data-table="tblCtx">Show data table</button>
+        <div class="table-wrap" id="tblCtx" hidden></div>
+      </div>
+
+      <div class="nav">
+        <button type="button" data-nav="-1">← Back</button>
+        <button type="button" data-nav="1">Next →</button>
+        <span class="count"><b class="cur">08</b> / 09</span>
+      </div>
+    </section>
+
+    <!-- 09 — levers -->
+    <section class="slide" data-sim="0">
+      <p class="eyebrow">Takeaways</p>
+      <h2>Six levers that stretch the same plan</h2>
+      <p class="lede">
+        Roughly in order of how much they return. The percentages come from this simulation's own
+        model — recompute them in the console against your scenario.
+      </p>
+
+      <div class="grid g2">
+        <div class="card">
+          <div class="lever">
+            <span class="lever-k">−95%</span>
+            <div>
+              <h3>Save workflow and ultracode for work that earns them</h3>
+              <p>By far the biggest lever: every agent in the fan-out runs a full chain of its own,
+                and <code>ultracode</code> stacks three phases on top of that. An 8-agent workflow
+                costs roughly <b>6×</b> a solo task; in ultracode, closer to <b>38×</b>. Worth it
+                for migrations and audits — not for fixing one failing test.</p>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="lever">
+            <span class="lever-k">−70%</span>
+            <div>
+              <h3>Drop the effort level for routine work</h3>
+              <p>Going from <code>xhigh</code> to <code>medium</code> cuts calls per task from 22 to
+                8. Keep <code>xhigh</code> and <code>max</code> for large refactors and hard
+                debugging.</p>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="lever">
+            <span class="lever-k">−55%</span>
+            <div>
+              <h3>Compact the session before it bloats</h3>
+              <p>Context is resent on every call. Dropping from 250k to 100k average tokens cuts
+                input cost in the same proportion — which is exactly what <code>/compact</code> and
+                shorter sessions do.</p>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="lever">
+            <span class="lever-k">−60%</span>
+            <div>
+              <h3>Use Sonnet 5 for what doesn't need Opus</h3>
+              <p>Sonnet 5 runs $2/$10 per million against Opus 5's $5/$25 (introductory pricing
+                through 2026-08-31). For direct edits and tests, the quality difference rarely pays
+                for the multiplier.</p>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="lever">
+            <span class="lever-k">−45%</span>
+            <div>
+              <h3>Protect the cache: stable prompt first</h3>
+              <p>Caching is a prefix match. A timestamp near the top of the prompt invalidates
+                everything after it and the cache factor goes from 0.25 to 1.0 — input cost
+                quadruples with nothing visible on screen.</p>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="lever">
+            <span class="lever-k">−30%</span>
+            <div>
+              <h3>Specify the whole task up front</h3>
+              <p>Every round trip with the user resends the accumulated context. One complete
+                instruction on the first turn usually costs less than the same task discovered
+                across five turns.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="note-box warn">
+        <strong>Every assumption, in one place.</strong> API list prices (Opus 5 $5/$25, Sonnet 5
+        $2/$10 introductory, Haiku 4.5 $1/$5 per million tokens); cache factor 0.2475; agent
+        fan-out with the coordinator at 0.45 and each agent at 0.70 of a full chain; ultracode at
+        3 phases with an <code>xhigh</code> effort floor; estimated monthly budgets of
+        $5 / $120 / $600 / $2,400 for Free / Pro / Max 5x / Max 20x; a 30-day month. None of these
+        is published as official consumption policy — they are the model's stated basis, so that
+        you can disagree with it precisely.
+      </div>
+
+      <div class="nav">
+        <button type="button" data-nav="-1">← Back</button>
+        <button type="button" data-nav="1" disabled>Next →</button>
+        <span class="count"><b class="cur">09</b> / 09</span>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<div class="console" id="console" aria-label="Simulation controls">
+  <div class="ctl" style="flex:1 1 200px">
+    <label for="cTasks">Tasks per day <b id="vTasks">12</b></label>
+    <input type="range" id="cTasks" min="1" max="80" step="1" value="12">
+  </div>
+
+  <div class="ctl" style="flex:1 1 200px">
+    <label for="cCtx">Context per call <b id="vCtx">120k</b></label>
+    <input type="range" id="cCtx" min="10" max="500" step="10" value="120">
+  </div>
+
+  <div class="ctl" style="flex:1 1 250px">
+    <span class="ctl-label">Effort level <b id="vEffort">high</b></span>
+    <div class="seg" id="segEffort" role="group" aria-label="Effort level"></div>
+  </div>
+
+  <div class="ctl" style="flex:1 1 210px">
+    <span class="ctl-label">Model <b id="vModel">Opus 5</b></span>
+    <div class="seg" id="segModel" role="group" aria-label="Model"></div>
+  </div>
+
+  <div class="ctl" style="flex:1 1 250px">
+    <span class="ctl-label">Execution mode <b id="vMode">solo</b></span>
+    <div class="seg" id="segMode" role="group" aria-label="Execution mode"></div>
+  </div>
+
+  <div class="ctl" id="ctlAgents" style="flex:1 1 200px">
+    <label for="cAgents">Agents per task <b id="vAgents">8</b></label>
+    <input type="range" id="cAgents" min="2" max="32" step="1" value="8">
+  </div>
+
+  <button class="console-reset" type="button" id="btnReset">RESET</button>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ============================ model ============================ */
+
+  var EFFORT = [
+    { id: "low",    calls: 4,  out: 900,   use: "Short questions, one-off edits" },
+    { id: "medium", calls: 8,  out: 2000,  use: "Everyday work, guided fixes" },
+    { id: "high",   calls: 14, out: 4500,  use: "Claude Code default" },
+    { id: "xhigh",  calls: 22, out: 8000,  use: "Multi-file refactors, debugging" },
+    { id: "max",    calls: 32, out: 14000, use: "Long autonomous tasks" }
+  ];
+
+  var MODELS = [
+    { id: "opus5",   name: "Opus 5",    inP: 5, outP: 25 },
+    { id: "sonnet5", name: "Sonnet 5",  inP: 2, outP: 10 },
+    { id: "haiku45", name: "Haiku 4.5", inP: 1, outP: 5 }
+  ];
+
+  var PLANS = [
+    { id: "free",  name: "Free",    price: "$0",   budget: 5,    tone: "var(--plan-1)" },
+    { id: "pro",   name: "Pro",     price: "$20",  budget: 120,  tone: "var(--plan-2)" },
+    { id: "max5",  name: "Max 5x",  price: "$100", budget: 600,  tone: "var(--plan-3)" },
+    { id: "max20", name: "Max 20x", price: "$200", budget: 2400, tone: "var(--plan-4)" }
+  ];
+
+  var CACHE_FACTOR = 0.2475;
+  var MONTH_DAYS = 30;
+
+  /* agent fan-out:
+     the coordinator spends a fraction of a full task chain (plans, delegates, synthesizes);
+     each agent runs its own chain, with its own context, slightly leaner. */
+  var COORD_SHARE = 0.45;
+  var AGENT_SHARE = 0.70;
+
+  var MODES = [
+    { id: "solo",      label: "solo",      phases: 1, floor: null },
+    { id: "workflow",  label: "workflow",  phases: 1, floor: null },
+    { id: "ultracode", label: "ultracode", phases: 3, floor: "xhigh" }
+  ];
+
+  var state = { tasks: 12, ctxK: 120, effort: "high", model: "opus5", mode: "solo", agents: 8 };
+  var DEFAULTS = { tasks: 12, ctxK: 120, effort: "high", model: "opus5", mode: "solo", agents: 8 };
+
+  function effortOf(id) {
+    for (var i = 0; i < EFFORT.length; i++) if (EFFORT[i].id === id) return EFFORT[i];
+    return EFFORT[2];
+  }
+  function modelOf(id) {
+    for (var i = 0; i < MODELS.length; i++) if (MODELS[i].id === id) return MODELS[i];
+    return MODELS[0];
+  }
+  function modeOf(id) {
+    for (var i = 0; i < MODES.length; i++) if (MODES[i].id === id) return MODES[i];
+    return MODES[0];
+  }
+  function effortIndex(id) {
+    for (var i = 0; i < EFFORT.length; i++) if (EFFORT[i].id === id) return i;
+    return 2;
+  }
+  /* ultracode enforces an effort floor; a higher console selection still wins */
+  function effectiveEffort(effortId, modeId) {
+    var mo = modeOf(modeId);
+    if (!mo.floor) return effortId;
+    return effortIndex(effortId) >= effortIndex(mo.floor) ? effortId : mo.floor;
+  }
+
+  /* cost of ONE full task chain, before any fan-out */
+  function chainCost(ctxK, effortId, modelId) {
+    var e = effortOf(effortId), m = modelOf(modelId);
+    var inCost = (ctxK * 1000) * (m.inP / 1e6) * CACHE_FACTOR;
+    var outCost = e.out * (m.outP / 1e6);
+    return e.calls * (inCost + outCost);
+  }
+
+  function costPerTask(ctxK, effortId, modelId, modeId, agents) {
+    modeId = modeId || "solo";
+    var mo = modeOf(modeId);
+    var base = chainCost(ctxK, effectiveEffort(effortId, modeId), modelId);
+    if (mo.id === "solo") return base;
+    var a = Math.max(2, agents || 2);
+    return mo.phases * (base * COORD_SHARE + a * base * AGENT_SHARE);
+  }
+
+  /* agent chains per task — used in labels */
+  function chainsPerTask(modeId, agents) {
+    var mo = modeOf(modeId);
+    if (mo.id === "solo") return 1;
+    return mo.phases * (1 + Math.max(2, agents));
+  }
+
+  function daysFor(budget, ctxK, effortId, modelId, tasks, modeId, agents) {
+    var perDay = costPerTask(ctxK, effortId, modelId, modeId, agents) * tasks;
+    if (perDay <= 0) return Infinity;
+    return budget / perDay;
+  }
+
+  /* ============================ formatting ============================ */
+
+  var nf = new Intl.NumberFormat("en-US");
+  function money(v) {
+    if (v >= 100) return "$" + nf.format(Math.round(v));
+    if (v >= 10) return "$" + v.toFixed(1);
+    if (v >= 0.1) return "$" + v.toFixed(2);
+    return "$" + v.toFixed(3);
+  }
+  function days(v) {
+    if (v >= 100) return nf.format(Math.round(v));
+    if (v >= 1) return v.toFixed(1);
+    return v.toFixed(2);
+  }
+  function int(v) { return nf.format(Math.round(v)); }
+  function tk(k) { return k >= 1000 ? (k / 1000) + "M" : k + "k"; }
+
+  /* ============================ render: effort table ============================ */
+
+  (function () {
+    var rows = "";
+    for (var i = 0; i < EFFORT.length; i++) {
+      var e = EFFORT[i];
+      rows += "<tr><td class=\"mono\"><b>" + e.id + "</b></td><td class=\"num\">" + e.calls +
+        "</td><td class=\"num\">" + nf.format(e.out) + "</td><td style=\"color:var(--ink-2)\">" + e.use + "</td></tr>";
+    }
+    document.getElementById("effortTable").innerHTML = rows;
+  })();
+
+  /* ============================ render: plan cards (slide 3) ============================ */
+
+  (function () {
+    var html = "";
+    for (var i = 0; i < PLANS.length; i++) {
+      var p = PLANS[i];
+      html += '<div class="plan">' +
+        '<div class="plan-head"><span class="swatch" style="background:' + p.tone + '"></span>' +
+        '<span class="plan-name">' + p.name + '</span><span class="plan-price">' + p.price + '/mo</span></div>' +
+        '<div class="plan-figure">' + money(p.budget) + '</div>' +
+        '<p style="margin:0;font-size:13px;color:var(--ink-2)">Equivalent monthly budget at API list prices.</p>' +
+        (p.id === "free"
+          ? '<span class="verdict short">no Claude Code</span>'
+          : '<span class="verdict ok">' + Math.round(p.budget / 20) + '× the sticker price</span>') +
+        '</div>';
+    }
+    document.getElementById("planIntro").innerHTML = html;
+  })();
+
+  /* ============================ SVG helpers ============================ */
+
+  var SV = "http://www.w3.org/2000/svg";
+  function el(name, attrs) {
+    var n = document.createElementNS(SV, name);
+    for (var k in attrs) if (Object.prototype.hasOwnProperty.call(attrs, k)) n.setAttribute(k, attrs[k]);
+    return n;
+  }
+  function txt(x, y, s, attrs) {
+    var t = el("text", attrs || {});
+    t.setAttribute("x", x); t.setAttribute("y", y);
+    t.textContent = s;
+    return t;
+  }
+  var AXIS_FONT = 'font-family:ui-monospace,"Cascadia Mono",Consolas,monospace;font-size:11px';
+
+  function bindTip(node, tipEl, frame, build) {
+    node.addEventListener("mouseenter", function () { tipEl.innerHTML = build(); tipEl.classList.add("on"); });
+    node.addEventListener("mousemove", function (ev) {
+      var r = frame.getBoundingClientRect();
+      tipEl.style.left = (ev.clientX - r.left) + "px";
+      tipEl.style.top = (ev.clientY - r.top - 8) + "px";
+    });
+    node.addEventListener("mouseleave", function () { tipEl.classList.remove("on"); });
+  }
+
+  /* ============================ chart 1 — days per plan ============================ */
+
+  function renderDaysChart() {
+    var frame = document.getElementById("frameDays");
+    var tip = document.getElementById("tipDays");
+    var old = frame.querySelector("svg"); if (old) old.remove();
+
+    var W = 920, rowH = 62, top = 34, H = top + PLANS.length * rowH + 34;
+    var x0 = 148, x1 = 786;
+
+    var data = PLANS.map(function (p) {
+      return { p: p, d: daysFor(p.budget, state.ctxK, state.effort, state.model, state.tasks, state.mode, state.agents) };
+    });
+    var maxD = Math.max.apply(null, data.map(function (r) { return r.d; }));
+    var scaleMax = Math.max(maxD, MONTH_DAYS * 1.05);
+
+    var svg = el("svg", { viewBox: "0 0 " + W + " " + H, role: "img" });
+    svg.appendChild(el("title", {})).textContent =
+      "Days before each plan's monthly budget runs out, in the current scenario";
+
+    // reference line: 30 days
+    var rx = x0 + (MONTH_DAYS / scaleMax) * (x1 - x0);
+    svg.appendChild(el("line", {
+      x1: rx, x2: rx, y1: top - 12, y2: H - 30,
+      stroke: "var(--line-strong)", "stroke-width": 1, "stroke-dasharray": "4 4"
+    }));
+    svg.appendChild(txt(rx, top - 18, "30 days · cycle renews", {
+      style: AXIS_FONT, fill: "var(--ink-3)", "text-anchor": "middle"
+    }));
+
+    for (var i = 0; i < data.length; i++) {
+      (function (row, idx) {
+        var y = top + idx * rowH + 8;
+        var w = Math.max(3, (Math.min(row.d, scaleMax) / scaleMax) * (x1 - x0));
+
+        svg.appendChild(txt(x0 - 14, y + 19, row.p.name, {
+          style: 'font-family:ui-monospace,"Cascadia Mono",Consolas,monospace;font-size:13px;font-weight:700',
+          fill: "var(--ink)", "text-anchor": "end"
+        }));
+        svg.appendChild(txt(x0 - 14, y + 34, row.p.price + "/mo", {
+          style: AXIS_FONT, fill: "var(--ink-3)", "text-anchor": "end"
+        }));
+
+        svg.appendChild(el("rect", {
+          x: x0, y: y, width: x1 - x0, height: 28, rx: 4, fill: "var(--surface-2)"
+        }));
+
+        svg.appendChild(el("rect", {
+          x: x0, y: y, width: w, height: 28, rx: 4, fill: row.p.tone,
+          stroke: "var(--surface)", "stroke-width": 2
+        }));
+
+        svg.appendChild(txt(x0 + w + 12, y + 19, days(row.d) + " days", {
+          style: 'font-family:ui-monospace,"Cascadia Mono",Consolas,monospace;font-size:13px;font-weight:700;font-variant-numeric:tabular-nums',
+          fill: "var(--ink)"
+        }));
+
+        var hit = el("rect", { x: x0, y: y - 6, width: x1 - x0, height: 40, fill: "transparent" });
+        svg.appendChild(hit);
+        bindTip(hit, tip, frame, function () {
+          var per = costPerTask(state.ctxK, state.effort, state.model, state.mode, state.agents);
+          return '<span class="tip-t">' + row.p.name + '</span>' +
+            '<span class="tip-r">Days to empty <b>' + days(row.d) + '</b></span>' +
+            '<span class="tip-r">Tasks in total <b>' + int(row.d * state.tasks) + '</b></span>' +
+            '<span class="tip-r">Cost per day <b>' + money(per * state.tasks) + '</b></span>' +
+            '<span class="tip-r">Budget <b>' + money(row.p.budget) + '</b></span>';
+        });
+      })(data[i], i);
+    }
+
+    svg.appendChild(el("line", {
+      x1: x0, x2: x1, y1: H - 30, y2: H - 30, stroke: "var(--line-strong)", "stroke-width": 1
+    }));
+    for (var t = 0; t <= 4; t++) {
+      var v = (scaleMax / 4) * t;
+      var xx = x0 + (t / 4) * (x1 - x0);
+      svg.appendChild(txt(xx, H - 12, days(v), {
+        style: AXIS_FONT, fill: "var(--ink-3)",
+        "text-anchor": t === 4 ? "end" : "middle"
+      }));
+    }
+    svg.appendChild(txt(16, H - 12, "days to empty", {
+      style: AXIS_FONT, fill: "var(--ink-3)", "text-anchor": "start"
+    }));
+
+    frame.insertBefore(svg, tip);
+
+    var rows = "";
+    for (var j = 0; j < data.length; j++) {
+      var r = data[j];
+      rows += "<tr><td class=\"mono\">" + r.p.name + "</td><td class=\"num\">" + money(r.p.budget) +
+        "</td><td class=\"num\">" + days(r.d) + "</td><td class=\"num\">" + int(r.d * state.tasks) + "</td></tr>";
+    }
+    document.getElementById("tblDays").innerHTML =
+      "<table><thead><tr><th>Plan</th><th class=\"num\">Budget</th><th class=\"num\">Days</th><th class=\"num\">Tasks</th></tr></thead><tbody>" +
+      rows + "</tbody></table>";
+  }
+
+  /* ============================ chart 2 — cost by effort ============================ */
+
+  function renderEffortChart() {
+    var frame = document.getElementById("frameEffort");
+    var tip = document.getElementById("tipEffort");
+    var old = frame.querySelector("svg"); if (old) old.remove();
+
+    var W = 920, H = 340, padL = 78, padR = 24, padT = 30, padB = 58;
+    var pw = W - padL - padR, ph = H - padT - padB;
+
+    var vals = EFFORT.map(function (e) {
+      return { e: e, c: costPerTask(state.ctxK, e.id, state.model, state.mode, state.agents) };
+    });
+    var maxV = Math.max.apply(null, vals.map(function (v) { return v.c; })) * 1.15;
+
+    var svg = el("svg", { viewBox: "0 0 " + W + " " + H, role: "img" });
+    svg.appendChild(el("title", {})).textContent = "Cost per task at each effort level";
+
+    for (var g = 0; g <= 4; g++) {
+      var yy = padT + ph - (g / 4) * ph;
+      svg.appendChild(el("line", {
+        x1: padL, x2: W - padR, y1: yy, y2: yy,
+        stroke: g === 0 ? "var(--line-strong)" : "var(--line)", "stroke-width": 1
+      }));
+      svg.appendChild(txt(padL - 12, yy + 4, money((maxV / 4) * g), {
+        style: AXIS_FONT, fill: "var(--ink-3)", "text-anchor": "end"
+      }));
+    }
+
+    var slotW = pw / vals.length, barW = Math.min(96, slotW * 0.52);
+
+    for (var i = 0; i < vals.length; i++) {
+      (function (v, idx) {
+        var cx = padL + slotW * (idx + 0.5);
+        var h = Math.max(2, (v.c / maxV) * ph);
+        var y = padT + ph - h;
+        var on = v.e.id === state.effort;
+
+        svg.appendChild(el("rect", {
+          x: cx - barW / 2, y: y, width: barW, height: h, rx: 4,
+          fill: on ? "var(--plan-3)" : "var(--muted-mark)"
+        }));
+
+        svg.appendChild(txt(cx, y - 10, money(v.c), {
+          style: 'font-family:ui-monospace,"Cascadia Mono",Consolas,monospace;font-size:12px;font-weight:' + (on ? "700" : "500") + ';font-variant-numeric:tabular-nums',
+          fill: on ? "var(--ink)" : "var(--ink-2)", "text-anchor": "middle"
+        }));
+
+        svg.appendChild(txt(cx, padT + ph + 22, v.e.id, {
+          style: 'font-family:ui-monospace,"Cascadia Mono",Consolas,monospace;font-size:12.5px;font-weight:' + (on ? "700" : "400"),
+          fill: on ? "var(--ink)" : "var(--ink-3)", "text-anchor": "middle"
+        }));
+        svg.appendChild(txt(cx, padT + ph + 40, v.e.calls + " calls", {
+          style: AXIS_FONT, fill: "var(--ink-3)", "text-anchor": "middle"
+        }));
+
+        var hit = el("rect", { x: cx - slotW / 2, y: padT, width: slotW, height: ph, fill: "transparent" });
+        svg.appendChild(hit);
+        bindTip(hit, tip, frame, function () {
+          var pro = daysFor(120, state.ctxK, v.e.id, state.model, state.tasks, state.mode, state.agents);
+          var m20 = daysFor(2400, state.ctxK, v.e.id, state.model, state.tasks, state.mode, state.agents);
+          return '<span class="tip-t">effort ' + v.e.id + '</span>' +
+            '<span class="tip-r">Cost / task <b>' + money(v.c) + '</b></span>' +
+            '<span class="tip-r">Calls <b>' + v.e.calls + '</b></span>' +
+            '<span class="tip-r">Pro lasts <b>' + days(pro) + ' d</b></span>' +
+            '<span class="tip-r">Max 20x lasts <b>' + days(m20) + ' d</b></span>';
+        });
+      })(vals[i], i);
+    }
+
+    frame.insertBefore(svg, tip);
+
+    var rows = "";
+    for (var j = 0; j < vals.length; j++) {
+      rows += "<tr><td class=\"mono\">" + vals[j].e.id + "</td><td class=\"num\">" + vals[j].e.calls +
+        "</td><td class=\"num\">" + nf.format(vals[j].e.out) + "</td><td class=\"num\">" + money(vals[j].c) + "</td></tr>";
+    }
+    document.getElementById("tblEffort").innerHTML =
+      "<table><thead><tr><th>Effort</th><th class=\"num\">Calls</th><th class=\"num\">Output/call</th><th class=\"num\">Cost/task</th></tr></thead><tbody>" +
+      rows + "</tbody></table>";
+  }
+
+  /* ============================ chart 3 — execution mode (log dot plot) ============================ */
+
+  function renderModeChart() {
+    var frame = document.getElementById("frameMode");
+    var tip = document.getElementById("tipMode");
+    var old = frame.querySelector("svg"); if (old) old.remove();
+
+    var W = 920, rowH = 78, top = 46, H = top + MODES.length * rowH + 40;
+    var x0 = 168, x1 = 812;
+
+    var rows = MODES.map(function (mo) {
+      return {
+        mo: mo,
+        cost: costPerTask(state.ctxK, state.effort, state.model, mo.id, state.agents),
+        chains: chainsPerTask(mo.id, state.agents),
+        eff: effectiveEffort(state.effort, mo.id),
+        pts: PLANS.map(function (p) {
+          return { p: p, d: daysFor(p.budget, state.ctxK, state.effort, state.model, state.tasks, mo.id, state.agents) };
+        })
+      };
+    });
+
+    var all = [];
+    rows.forEach(function (r) { r.pts.forEach(function (pt) { all.push(pt.d); }); });
+    var lo = Math.max(0.001, Math.min.apply(null, all));
+    var hi = Math.max.apply(null, all);
+    var loE = Math.floor(Math.log10(lo)), hiE = Math.ceil(Math.log10(hi));
+    if (hiE - loE < 2) hiE = loE + 2;
+
+    function xOf(d) {
+      var v = Math.min(Math.max(d, Math.pow(10, loE)), Math.pow(10, hiE));
+      return x0 + ((Math.log10(v) - loE) / (hiE - loE)) * (x1 - x0);
+    }
+
+    var svg = el("svg", { viewBox: "0 0 " + W + " " + H, role: "img" });
+    svg.appendChild(el("title", {})).textContent =
+      "Days to empty per plan under each execution mode (logarithmic scale)";
+
+    for (var e = loE; e <= hiE; e++) {
+      var gx = xOf(Math.pow(10, e));
+      svg.appendChild(el("line", {
+        x1: gx, x2: gx, y1: top - 16, y2: H - 34, stroke: "var(--line)", "stroke-width": 1
+      }));
+      svg.appendChild(txt(gx, H - 14, days(Math.pow(10, e)) + " d", {
+        style: AXIS_FONT, fill: "var(--ink-3)", "text-anchor": "middle"
+      }));
+    }
+
+    var rx = xOf(MONTH_DAYS);
+    svg.appendChild(el("line", {
+      x1: rx, x2: rx, y1: top - 16, y2: H - 34,
+      stroke: "var(--line-strong)", "stroke-width": 1, "stroke-dasharray": "4 4"
+    }));
+    svg.appendChild(txt(rx, top - 24, "30 days", {
+      style: AXIS_FONT, fill: "var(--ink-3)", "text-anchor": "middle"
+    }));
+
+    rows.forEach(function (r, i) {
+      var y = top + i * rowH + rowH / 2 - 12;
+      var on = r.mo.id === state.mode;
+
+      if (on) {
+        svg.appendChild(el("rect", {
+          x: 12, y: y - 26, width: W - 24, height: 54, rx: 6, fill: "var(--accent-wash)"
+        }));
+      }
+
+      svg.appendChild(txt(x0 - 18, y - 2, r.mo.label, {
+        style: 'font-family:ui-monospace,"Cascadia Mono",Consolas,monospace;font-size:13.5px;font-weight:' + (on ? "700" : "500"),
+        fill: on ? "var(--ink)" : "var(--ink-2)", "text-anchor": "end"
+      }));
+      svg.appendChild(txt(x0 - 18, y + 14, money(r.cost) + " / task", {
+        style: AXIS_FONT, fill: "var(--ink-3)", "text-anchor": "end"
+      }));
+
+      var xs = r.pts.map(function (pt) { return xOf(pt.d); });
+      svg.appendChild(el("line", {
+        x1: Math.min.apply(null, xs), x2: Math.max.apply(null, xs), y1: y, y2: y,
+        stroke: "var(--line-strong)", "stroke-width": 2, "stroke-linecap": "round"
+      }));
+
+      // full-row hover band — large target; the dots below take precedence
+      var band = el("rect", { x: x0, y: y - 26, width: x1 - x0, height: 52, fill: "transparent" });
+      svg.appendChild(band);
+      bindTip(band, tip, frame, function () {
+        var html = '<span class="tip-t">' + r.mo.label + ' · ' + money(r.cost) + ' / task</span>';
+        r.pts.forEach(function (pt) {
+          html += '<span class="tip-r">' + pt.p.name + ' <b>' + days(pt.d) + ' d</b></span>';
+        });
+        return html;
+      });
+
+      r.pts.forEach(function (pt) {
+        svg.appendChild(el("circle", {
+          cx: xOf(pt.d), cy: y, r: 7, fill: pt.p.tone,
+          stroke: "var(--surface)", "stroke-width": 2
+        }));
+        var hit = el("circle", { cx: xOf(pt.d), cy: y, r: 15, fill: "transparent" });
+        svg.appendChild(hit);
+        bindTip(hit, tip, frame, function () {
+          return '<span class="tip-t">' + pt.p.name + ' · ' + r.mo.label + '</span>' +
+            '<span class="tip-r">Days to empty <b>' + days(pt.d) + '</b></span>' +
+            '<span class="tip-r">Cost / task <b>' + money(r.cost) + '</b></span>' +
+            '<span class="tip-r">Chains / task <b>' + r.chains + '</b></span>' +
+            '<span class="tip-r">Effective effort <b>' + r.eff + '</b></span>';
+        });
+      });
+    });
+
+    svg.appendChild(txt(16, H - 14, "days to empty", {
+      style: AXIS_FONT, fill: "var(--ink-3)", "text-anchor": "start"
+    }));
+
+    frame.insertBefore(svg, tip);
+
+    document.getElementById("legendMode").innerHTML = PLANS.map(function (p) {
+      return '<span><i style="width:10px;height:10px;border-radius:50%;background:' + p.tone + ';display:inline-block"></i>' + p.name + '</span>';
+    }).join("") + '<span style="color:var(--ink-3)">horizontal axis on a logarithmic scale</span>';
+
+    var solo = rows[0].cost;
+    var cur = rows[MODES.map(function (m) { return m.id; }).indexOf(state.mode)];
+    var note = document.getElementById("modeNote");
+    if (state.mode === "solo") {
+      note.innerHTML = '<strong>You are in solo.</strong> Turning on a workflow with ' + state.agents +
+        ' agents would multiply cost per task by <b class="mono">' +
+        (rows[1].cost / solo).toFixed(1) + '×</b>; ultracode, by <b class="mono">' +
+        (rows[2].cost / solo).toFixed(1) + '×</b>.';
+    } else {
+      note.innerHTML = '<strong>You are in ' + state.mode + ' with ' + state.agents +
+        ' agents.</strong> That is <b class="mono">' + cur.chains +
+        '</b> agent chains per task — <b class="mono">' + (cur.cost / solo).toFixed(1) +
+        '×</b> the cost of solo. On Max 20x that comes to <b class="mono">' +
+        days(cur.pts[3].d) + ' days</b> against <b class="mono">' + days(rows[0].pts[3].d) +
+        '</b> in solo.';
+    }
+
+    var body = "";
+    rows.forEach(function (r) {
+      body += '<tr><td class="mono">' + r.mo.label + '</td><td class="num">' + r.chains +
+        '</td><td class="num">' + money(r.cost) + '</td>';
+      r.pts.forEach(function (pt) { body += '<td class="num">' + days(pt.d) + '</td>'; });
+      body += '</tr>';
+    });
+    document.getElementById("tblMode").innerHTML =
+      '<table><thead><tr><th>Mode</th><th class="num">Chains</th><th class="num">Cost/task</th>' +
+      PLANS.map(function (p) { return '<th class="num">' + p.name + '</th>'; }).join("") +
+      '</tr></thead><tbody>' + body + '</tbody></table>';
+  }
+
+  /* ============================ chart 4 — context × days (log) ============================ */
+
+  var CTX_STEPS = [10, 25, 50, 75, 100, 150, 200, 250, 300, 350, 400, 450, 500];
+
+  function renderCtxChart() {
+    var frame = document.getElementById("frameCtx");
+    var tip = document.getElementById("tipCtx");
+    var old = frame.querySelector("svg"); if (old) old.remove();
+
+    var W = 920, H = 380, padL = 66, padR = 96, padT = 26, padB = 52;
+    var pw = W - padL - padR, ph = H - padT - padB;
+
+    var series = PLANS.map(function (p) {
+      return {
+        p: p,
+        pts: CTX_STEPS.map(function (k) {
+          return { k: k, d: daysFor(p.budget, k, state.effort, state.model, state.tasks, state.mode, state.agents) };
+        })
+      };
+    });
+
+    var all = [];
+    series.forEach(function (s) { s.pts.forEach(function (pt) { all.push(pt.d); }); });
+    var lo = Math.max(0.001, Math.min.apply(null, all));
+    var hi = Math.max.apply(null, all);
+    var loE = Math.floor(Math.log10(lo)), hiE = Math.ceil(Math.log10(hi));
+    if (hiE - loE < 2) hiE = loE + 2;
+
+    function yOf(d) {
+      var v = Math.max(d, Math.pow(10, loE));
+      var f = (Math.log10(v) - loE) / (hiE - loE);
+      return padT + ph - f * ph;
+    }
+    function xOf(k) {
+      return padL + ((k - CTX_STEPS[0]) / (CTX_STEPS[CTX_STEPS.length - 1] - CTX_STEPS[0])) * pw;
+    }
+
+    var svg = el("svg", { viewBox: "0 0 " + W + " " + H, role: "img" });
+    svg.appendChild(el("title", {})).textContent =
+      "Days to empty as context per call grows, per plan (logarithmic scale)";
+
+    for (var e = loE; e <= hiE; e++) {
+      var yy = yOf(Math.pow(10, e));
+      svg.appendChild(el("line", {
+        x1: padL, x2: W - padR, y1: yy, y2: yy,
+        stroke: e === loE ? "var(--line-strong)" : "var(--line)", "stroke-width": 1
+      }));
+      svg.appendChild(txt(padL - 12, yy + 4, days(Math.pow(10, e)) + " d", {
+        style: AXIS_FONT, fill: "var(--ink-3)", "text-anchor": "end"
+      }));
+    }
+
+    var mx = xOf(Math.min(500, Math.max(10, state.ctxK)));
+    svg.appendChild(el("line", {
+      x1: mx, x2: mx, y1: padT, y2: padT + ph,
+      stroke: "var(--accent)", "stroke-width": 1.5, "stroke-dasharray": "3 3", opacity: ".7"
+    }));
+    svg.appendChild(txt(mx, padT - 8, "current · " + tk(state.ctxK), {
+      style: AXIS_FONT, fill: "var(--accent)", "text-anchor": "middle"
+    }));
+
+    series.forEach(function (s) {
+      var d = "";
+      s.pts.forEach(function (pt, i) { d += (i ? "L" : "M") + xOf(pt.k).toFixed(1) + " " + yOf(pt.d).toFixed(1) + " "; });
+      svg.appendChild(el("path", {
+        d: d, fill: "none", stroke: s.p.tone, "stroke-width": 2,
+        "stroke-linecap": "round", "stroke-linejoin": "round"
+      }));
+
+      var last = s.pts[s.pts.length - 1];
+      svg.appendChild(el("circle", {
+        cx: xOf(last.k), cy: yOf(last.d), r: 4,
+        fill: s.p.tone, stroke: "var(--surface)", "stroke-width": 2
+      }));
+      svg.appendChild(txt(xOf(last.k) + 11, yOf(last.d) + 4, s.p.name, {
+        style: 'font-family:ui-monospace,"Cascadia Mono",Consolas,monospace;font-size:12px;font-weight:700',
+        fill: "var(--ink)"
+      }));
+    });
+
+    for (var t = 0; t < CTX_STEPS.length; t += 2) {
+      svg.appendChild(txt(xOf(CTX_STEPS[t]), padT + ph + 22, tk(CTX_STEPS[t]), {
+        style: AXIS_FONT, fill: "var(--ink-3)", "text-anchor": "middle"
+      }));
+    }
+    svg.appendChild(txt(padL, H - 8, "context per call (tokens)", {
+      style: AXIS_FONT, fill: "var(--ink-3)"
+    }));
+
+    var cross = el("line", {
+      y1: padT, y2: padT + ph, stroke: "var(--ink-3)", "stroke-width": 1,
+      "stroke-dasharray": "3 3", opacity: "0"
+    });
+    svg.appendChild(cross);
+    var overlay = el("rect", { x: padL, y: padT, width: pw, height: ph, fill: "transparent" });
+    svg.appendChild(overlay);
+
+    overlay.addEventListener("mousemove", function (ev) {
+      var r = svg.getBoundingClientRect();
+      var sx = (ev.clientX - r.left) * (W / r.width);
+      var best = 0, bd = Infinity;
+      for (var i = 0; i < CTX_STEPS.length; i++) {
+        var dd = Math.abs(xOf(CTX_STEPS[i]) - sx);
+        if (dd < bd) { bd = dd; best = i; }
+      }
+      cross.setAttribute("x1", xOf(CTX_STEPS[best]));
+      cross.setAttribute("x2", xOf(CTX_STEPS[best]));
+      cross.setAttribute("opacity", "1");
+
+      var html = '<span class="tip-t">context ' + tk(CTX_STEPS[best]) + '</span>';
+      series.forEach(function (s) {
+        html += '<span class="tip-r">' + s.p.name + ' <b>' + days(s.pts[best].d) + ' d</b></span>';
+      });
+      tip.innerHTML = html;
+      tip.classList.add("on");
+      var fr = frame.getBoundingClientRect();
+      tip.style.left = (ev.clientX - fr.left) + "px";
+      tip.style.top = (ev.clientY - fr.top - 8) + "px";
+    });
+    overlay.addEventListener("mouseleave", function () {
+      cross.setAttribute("opacity", "0");
+      tip.classList.remove("on");
+    });
+
+    frame.insertBefore(svg, tip);
+
+    document.getElementById("legendCtx").innerHTML = PLANS.map(function (p) {
+      return '<span><i style="width:14px;height:3px;border-radius:2px;background:' + p.tone + ';display:inline-block"></i>' + p.name + '</span>';
+    }).join("") + '<span style="color:var(--ink-3)">vertical axis on a logarithmic scale</span>';
+
+    var rows = "";
+    for (var i2 = 0; i2 < CTX_STEPS.length; i2++) {
+      rows += "<tr><td class=\"mono\">" + tk(CTX_STEPS[i2]) + "</td>";
+      series.forEach(function (s) { rows += "<td class=\"num\">" + days(s.pts[i2].d) + "</td>"; });
+      rows += "</tr>";
+    }
+    document.getElementById("tblCtx").innerHTML =
+      "<table><thead><tr><th>Context</th>" +
+      PLANS.map(function (p) { return '<th class="num">' + p.name + "</th>"; }).join("") +
+      "</tr></thead><tbody>" + rows + "</tbody></table>";
+  }
+
+  /* ============================ simulator cards ============================ */
+
+  function renderPlanCards() {
+    var per = costPerTask(state.ctxK, state.effort, state.model, state.mode, state.agents);
+    var perDay = per * state.tasks;
+    var html = "";
+
+    for (var i = 0; i < PLANS.length; i++) {
+      var p = PLANS[i];
+      var d = daysFor(p.budget, state.ctxK, state.effort, state.model, state.tasks, state.mode, state.agents);
+      var pct = Math.min(100, (d / MONTH_DAYS) * 100);
+      var cls = d >= MONTH_DAYS ? "ok" : (d >= 20 ? "tight" : "short");
+      var label = d >= MONTH_DAYS ? "covers the month" : (d >= 20 ? "cutting it close" : "runs out early");
+
+      html += '<div class="plan">' +
+        '<div class="plan-head"><span class="swatch" style="background:' + p.tone + '"></span>' +
+        '<span class="plan-name">' + p.name + '</span><span class="plan-price">' + p.price + '/mo</span></div>' +
+        '<div class="plan-figure">' + days(d) + ' <span>days</span></div>' +
+        '<div class="meter"><i style="width:' + pct.toFixed(1) + '%;background:' + p.tone + '"></i></div>' +
+        '<span class="verdict ' + cls + '">' + label + '</span>' +
+        '<div class="plan-rows">' +
+        '<div><span>Tasks before empty</span><b>' + int(d * state.tasks) + '</b></div>' +
+        '<div><span>Cost per task</span><b>' + money(per) + '</b></div>' +
+        '<div><span>Cost per day</span><b>' + money(perDay) + '</b></div>' +
+        '<div><span>Budget</span><b>' + money(p.budget) + '</b></div>' +
+        '</div></div>';
+    }
+    document.getElementById("planCards").innerHTML = html;
+
+    var effId = effectiveEffort(state.effort, state.mode);
+    var e = effortOf(effId), m = modelOf(state.model);
+    var chains = chainsPerTask(state.mode, state.agents);
+    document.getElementById("scenarioLine").innerHTML =
+      '<b class="mono">' + state.tasks + '</b> tasks per day · <b class="mono">' + state.mode +
+      '</b> mode' + (state.mode === "solo" ? "" : ' with <b class="mono">' + state.agents + '</b> agents') +
+      ' · <b class="mono">' + e.id + '</b> effort (' + e.calls + ' calls per chain, ' +
+      '<b class="mono">' + chains + '</b> chain' + (chains > 1 ? "s" : "") + ' per task) · ' +
+      '<b class="mono">' + tk(state.ctxK) + '</b> context tokens per call · <b class="mono">' +
+      m.name + '</b> — which works out to <b class="mono">' + money(per) +
+      '</b> per task and <b class="mono">' + money(perDay) + '</b> per day.';
+  }
+
+  /* ============================ controls ============================ */
+
+  function buildSegs() {
+    var se = document.getElementById("segEffort");
+    se.innerHTML = EFFORT.map(function (e) {
+      return '<button type="button" data-effort="' + e.id + '" aria-pressed="' + (e.id === state.effort) + '">' + e.id + "</button>";
+    }).join("");
+    se.addEventListener("click", function (ev) {
+      var b = ev.target.closest("button[data-effort]");
+      if (!b) return;
+      state.effort = b.getAttribute("data-effort");
+      syncControls(); renderAll();
+    });
+
+    var sm = document.getElementById("segModel");
+    sm.innerHTML = MODELS.map(function (m) {
+      return '<button type="button" data-model="' + m.id + '" aria-pressed="' + (m.id === state.model) + '">' + m.name + "</button>";
+    }).join("");
+    sm.addEventListener("click", function (ev) {
+      var b = ev.target.closest("button[data-model]");
+      if (!b) return;
+      state.model = b.getAttribute("data-model");
+      syncControls(); renderAll();
+    });
+
+    var smo = document.getElementById("segMode");
+    smo.innerHTML = MODES.map(function (mo) {
+      return '<button type="button" data-mode="' + mo.id + '" aria-pressed="' + (mo.id === state.mode) + '">' + mo.label + "</button>";
+    }).join("");
+    smo.addEventListener("click", function (ev) {
+      var b = ev.target.closest("button[data-mode]");
+      if (!b) return;
+      state.mode = b.getAttribute("data-mode");
+      syncControls(); renderAll();
+    });
+  }
+
+  function syncControls() {
+    document.getElementById("cTasks").value = state.tasks;
+    document.getElementById("cCtx").value = state.ctxK;
+    document.getElementById("cAgents").value = state.agents;
+    document.getElementById("vTasks").textContent = state.tasks;
+    document.getElementById("vCtx").textContent = tk(state.ctxK);
+    document.getElementById("vModel").textContent = modelOf(state.model).name;
+    document.getElementById("vMode").textContent = state.mode;
+    document.getElementById("vAgents").textContent = state.agents;
+
+    // ultracode enforces an effort floor — surface it when the floor is active
+    var eff = effectiveEffort(state.effort, state.mode);
+    document.getElementById("vEffort").textContent =
+      eff === state.effort ? state.effort : state.effort + " → " + eff;
+
+    // agents only matter outside solo
+    var solo = state.mode === "solo";
+    document.getElementById("ctlAgents").classList.toggle("off", solo);
+    document.getElementById("cAgents").disabled = solo;
+
+    var eb = document.querySelectorAll("#segEffort button");
+    for (var i = 0; i < eb.length; i++)
+      eb[i].setAttribute("aria-pressed", String(eb[i].getAttribute("data-effort") === state.effort));
+
+    var mb = document.querySelectorAll("#segModel button");
+    for (var j = 0; j < mb.length; j++)
+      mb[j].setAttribute("aria-pressed", String(mb[j].getAttribute("data-model") === state.model));
+
+    var ob = document.querySelectorAll("#segMode button");
+    for (var k = 0; k < ob.length; k++)
+      ob[k].setAttribute("aria-pressed", String(ob[k].getAttribute("data-mode") === state.mode));
+  }
+
+  document.getElementById("cTasks").addEventListener("input", function () {
+    state.tasks = parseInt(this.value, 10);
+    document.getElementById("vTasks").textContent = state.tasks;
+    renderAll();
+  });
+  document.getElementById("cCtx").addEventListener("input", function () {
+    state.ctxK = parseInt(this.value, 10);
+    document.getElementById("vCtx").textContent = tk(state.ctxK);
+    renderAll();
+  });
+  document.getElementById("cAgents").addEventListener("input", function () {
+    state.agents = parseInt(this.value, 10);
+    document.getElementById("vAgents").textContent = state.agents;
+    renderAll();
+  });
+  document.getElementById("btnReset").addEventListener("click", function () {
+    state.tasks = DEFAULTS.tasks; state.ctxK = DEFAULTS.ctxK;
+    state.effort = DEFAULTS.effort; state.model = DEFAULTS.model;
+    state.mode = DEFAULTS.mode; state.agents = DEFAULTS.agents;
+    syncControls(); renderAll();
+  });
+
+  /* ============================ navigation ============================ */
+
+  var slides = document.querySelectorAll(".slide");
+  var railBtns = document.querySelectorAll(".rail-btn");
+  var idx = 0;
+
+  function go(n) {
+    idx = Math.max(0, Math.min(slides.length - 1, n));
+    for (var i = 0; i < slides.length; i++) slides[i].classList.toggle("is-active", i === idx);
+    for (var j = 0; j < railBtns.length; j++) railBtns[j].setAttribute("aria-current", String(j === idx));
+
+    document.body.classList.toggle("sim-mode", slides[idx].getAttribute("data-sim") === "1");
+
+    var navs = slides[idx].querySelectorAll("[data-nav]");
+    for (var k = 0; k < navs.length; k++) {
+      var dir = parseInt(navs[k].getAttribute("data-nav"), 10);
+      navs[k].disabled = (dir < 0 && idx === 0) || (dir > 0 && idx === slides.length - 1);
+    }
+    window.scrollTo({ top: 0, behavior: "instant" in window ? "instant" : "auto" });
+    renderAll();
+  }
+
+  document.addEventListener("click", function (ev) {
+    var r = ev.target.closest("[data-go]");
+    if (r) { go(parseInt(r.getAttribute("data-go"), 10)); return; }
+    var n = ev.target.closest("[data-nav]");
+    if (n) { go(idx + parseInt(n.getAttribute("data-nav"), 10)); return; }
+    var t = ev.target.closest("[data-table]");
+    if (t) {
+      var target = document.getElementById(t.getAttribute("data-table"));
+      var open = !target.hasAttribute("hidden");
+      if (open) { target.setAttribute("hidden", ""); t.textContent = "Show data table"; }
+      else { target.removeAttribute("hidden"); t.textContent = "Hide data table"; }
+    }
+  });
+
+  document.addEventListener("keydown", function (ev) {
+    if (ev.target.matches("input, button, select, textarea")) {
+      if (ev.key !== "ArrowLeft" && ev.key !== "ArrowRight") return;
+      if (ev.target.matches("input[type=range]")) return;
+    }
+    if (ev.key === "ArrowRight" || ev.key === "PageDown") go(idx + 1);
+    if (ev.key === "ArrowLeft" || ev.key === "PageUp") go(idx - 1);
+  });
+
+  /* ============================ theme ============================ */
+
+  document.getElementById("themeBtn").addEventListener("click", function () {
+    var root = document.documentElement;
+    var cur = root.getAttribute("data-theme");
+    var dark = cur ? cur === "dark"
+      : window.matchMedia("(prefers-color-scheme: dark)").matches;
+    root.setAttribute("data-theme", dark ? "light" : "dark");
+    renderAll();
+  });
+
+  /* ============================ orchestration ============================ */
+
+  function renderAll() {
+    var sim = slides[idx].getAttribute("data-sim") === "1";
+    if (!sim) return;
+    renderPlanCards();
+    if (document.getElementById("frameDays").offsetParent !== null) renderDaysChart();
+    if (document.getElementById("frameEffort").offsetParent !== null) renderEffortChart();
+    if (document.getElementById("frameMode").offsetParent !== null) renderModeChart();
+    if (document.getElementById("frameCtx").offsetParent !== null) renderCtxChart();
+  }
+
+  buildSegs();
+  syncControls();
+  go(0);
+})();
+</script>
