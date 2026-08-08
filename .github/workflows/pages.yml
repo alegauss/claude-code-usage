@@ -51,12 +51,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # The page is the artifact — there is no build step. Copy the single
-      # self-contained file and nothing else; tooling stays out of the deploy.
+      # The page is the artifact — there is no build step. index.html carries
+      # its own CSS, JS and favicon; the four files beside it are the ones that
+      # cannot be inlined, because crawlers fetch them over HTTP by path.
+      # Tooling still stays out of the deploy.
       - name: Assemble site
         run: |
           mkdir -p _site
-          cp index.html _site/
+          cp index.html og.png robots.txt sitemap.xml llms.txt _site/
 
       - uses: actions/configure-pages@v5
 

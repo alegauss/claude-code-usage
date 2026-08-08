@@ -19,7 +19,8 @@
     "measure": "node tools/measure-usage.mjs",
     "measure:json": "node tools/measure-usage.mjs --json .usage/facts.json",
     "apply": "node tools/apply-measurements.mjs",
-    "recalibrate": "npm run measure:json && npm run apply && npm run check"
+    "recalibrate": "npm run measure:json && npm run apply && npm run check",
+    "og": "node tools/make-og.mjs"
   },
   "devDependencies": {
     "playwright": "^1.62.1"

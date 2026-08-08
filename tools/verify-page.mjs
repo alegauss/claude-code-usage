@@ -12,7 +12,7 @@
 
 import { chromium } from "playwright";
 import { pathToFileURL } from "url";
-import { mkdirSync } from "fs";
+import { existsSync, mkdirSync } from "fs";
 import path from "path";
 
 const SHOTS = process.argv.includes("--shots");
@@ -40,8 +40,92 @@ async function launch() {
   }
 }
 
+/* Files that must ship beside index.html, and are therefore listed in the
+   assemble step of .github/workflows/pages.yml. A social crawler fetches
+   og:image by URL, so it is the one asset that cannot be inlined. */
+const SIDECARS = ["og.png", "robots.txt", "sitemap.xml", "llms.txt"];
+
 const browser = await launch();
 if (SHOTS) mkdirSync(SHOT_DIR, { recursive: true });
+
+// --- the head: what a link preview and a crawler see before anything renders ---
+{
+  const page = await browser.newPage({ viewport: { width: 1440, height: 940 } });
+  await page.goto(pathToFileURL(PAGE).href);
+
+  if (await page.evaluate(() => document.compatMode) !== "CSS1Compat") {
+    fail("head: no doctype — the page renders in quirks mode");
+  }
+  if (!await page.evaluate(() => document.documentElement.lang)) {
+    fail("head: <html> has no lang attribute");
+  }
+  if (!await page.evaluate(() => document.querySelector('meta[name="viewport"]'))) {
+    fail("head: no viewport meta — mobile renders at desktop width and ignores the breakpoint");
+  }
+
+  // absolute: true where a crawler will not resolve a relative path for us
+  const REQUIRED = [
+    { sel: "meta[charset]" },
+    { sel: 'meta[name="description"]', attr: "content" },
+    { sel: 'link[rel="icon"]', attr: "href" },
+    { sel: 'meta[name="twitter:card"]', attr: "content" },
+    { sel: 'meta[property="og:title"]', attr: "content" },
+    { sel: 'meta[property="og:description"]', attr: "content" },
+    { sel: 'link[rel="canonical"]', attr: "href", absolute: true },
+    { sel: 'meta[property="og:url"]', attr: "content", absolute: true },
+    { sel: 'meta[property="og:image"]', attr: "content", absolute: true },
+    { sel: 'meta[name="twitter:image"]', attr: "content", absolute: true }
+  ];
+  for (const { sel, attr, absolute } of REQUIRED) {
+    const value = await page.evaluate(
+      ([s, a]) => {
+        const el = document.querySelector(s);
+        if (!el) return null;
+        return a ? el.getAttribute(a) : "present";
+      },
+      [sel, attr]
+    );
+    if (!value) fail(`head: missing ${sel}`);
+    else if (absolute && !value.startsWith("https://")) {
+      fail(`head: ${sel} must be an absolute URL — a crawler cannot resolve "${value}"`);
+    }
+  }
+
+  const ld = await page.evaluate(() => document.querySelector('script[type="application/ld+json"]')?.textContent);
+  if (!ld) fail("head: no JSON-LD block");
+  else { try { JSON.parse(ld); } catch (e) { fail(`head: JSON-LD does not parse — ${e.message}`); } }
+
+  // the inline favicon has to actually decode, not just be present
+  const icon = await page.evaluate(() => new Promise((r) => {
+    const el = document.querySelector('link[rel="icon"]');
+    if (!el) return r("missing");
+    const img = new Image();
+    img.onload = () => r("ok");
+    img.onerror = () => r("failed to decode");
+    img.src = el.href;
+  }));
+  if (icon !== "ok") fail(`head: favicon ${icon}`);
+
+  for (const f of SIDECARS) {
+    if (!existsSync(f)) fail(`sidecar: ${f} is referenced or deployed but missing from the repo`);
+  }
+
+  await page.close();
+}
+
+// --- mobile: the viewport meta is what makes the 860px breakpoint reachable ---
+{
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true });
+  await page.goto(pathToFileURL(PAGE).href);
+  await page.waitForTimeout(200);
+  const m = await page.evaluate(() => ({
+    width: window.innerWidth,
+    overflow: document.documentElement.scrollWidth > window.innerWidth + 1
+  }));
+  if (m.width > 500) fail(`mobile: viewport reports ${m.width}px — the viewport meta is not taking effect`);
+  if (m.overflow) fail("mobile: page scrolls horizontally at 390px");
+  await page.close();
+}
 
 for (const theme of ["light", "dark"]) {
   const page = await browser.newPage({ viewport: { width: 1440, height: 940 } });

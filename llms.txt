@@ -1,0 +1,65 @@
+# Claude Code usage simulator
+
+> An interactive model of how long Claude Code credits last on each subscription
+> plan (Free, Pro, Max 5x, Max 20x) under a working pace you set. Every
+> coefficient in the cost model is measured from real Claude Code session
+> transcripts rather than assumed, and the page states which numbers are
+> evidence and which are still estimates.
+
+The whole product is one self-contained HTML file with no build step, no runtime
+dependencies and no tracking. It runs from disk as readily as from the web.
+
+## What it models
+
+- `chain_cost = calls × (context × input_price × cache_factor + output × output_price)`
+- `task_cost = phases × (chain_cost × coord_share + agents × chain_cost × agent_share)`
+- `days = monthly_budget ÷ (task_cost × tasks_per_day)`
+- `minutes = window_allowance ÷ (task_cost × tasks × burst) × 300`
+
+Two clocks, deliberately not reconciled: a subscription meters a rolling 5-hour
+window *and* a weekly cap. The window governs an afternoon; the weekly cap
+governs a month.
+
+## Measured findings
+
+Taken from 1,864 tasks and 79,377 API requests across 29 projects over 32 active
+days, priced at API list rates.
+
+- Blended input multiplier (`cache_factor`) is **0.1335**, not the 0.2475 first
+  assumed: 98.2% of context is cache reads at 0.1×, and Claude Code uses the
+  one-hour cache TTL, whose writes cost 2× a base input token rather than 1.25×.
+- A task at `high` effort takes a median of **19 calls**, and each call emits
+  about **650 output tokens**. Effort buys more calls, not longer answers.
+- Context per call averages **250k**, roughly 2.7× the usual assumption; a
+  light-context project sits near 126k and a heavy one near 324k, a ~4× spread
+  in cost per task.
+- Fan-out is real but rare: **2.8% of requests** come from subagents, across
+  **3.2% of tasks**. A full workflow run uses a median of 11 agents at 23 calls
+  each.
+- The coordinator of a fan-out runs **longer** than a solo chain, not shorter.
+- Work arrives in bursts: the busiest five hours of a day hold a median of
+  **63%** of that day's tasks.
+- Autonomous `/loop` runs were **57% of all measured spend**, and the model has
+  no lever for them.
+
+## Stated assumptions, not measurements
+
+- Monthly budgets per plan ($5 / $120 / $600 / $2,400) are estimates. Nothing
+  published states a dollar equivalent, and measured usage on a $100 plan
+  reached $455/day at list prices.
+- Five-hour window allowances ($16 / $160 / $800 / $3,200) are anchored on the
+  most expensive window observed without a cutoff; the ratios come from the plan
+  names.
+- Free is carried at an illustrative value because it does not include Claude Code.
+
+## Links
+
+- Site: https://alegauss.github.io/claude-code-usage/
+- Source: https://github.com/alegauss/claude-code-usage
+- Licence: Apache License 2.0
+
+## Sharing a view
+
+Slides are addressable. `#slide=6&case=heavy` names a measured workload profile;
+`case=custom&ctx=410&effort=xhigh` spells out an off-profile scenario. Pace,
+model and mode ride along only when they differ from the defaults.
