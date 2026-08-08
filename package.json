@@ -15,7 +15,11 @@
     "check": "npm run check:palette && npm run check:page",
     "check:palette": "node tools/check-palette.mjs",
     "check:page": "node tools/verify-page.mjs",
-    "shots": "node tools/verify-page.mjs --shots"
+    "shots": "node tools/verify-page.mjs --shots",
+    "measure": "node tools/measure-usage.mjs",
+    "measure:json": "node tools/measure-usage.mjs --json .usage/facts.json",
+    "apply": "node tools/apply-measurements.mjs",
+    "recalibrate": "npm run measure:json && npm run apply && npm run check"
   },
   "devDependencies": {
     "playwright": "^1.62.1"

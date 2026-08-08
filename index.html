@@ -225,6 +225,10 @@
     max-width: 62ch;
     margin: 16px 0 0;
   }
+  /* On the simulation slides the prose sits directly above and below a
+     full-width chart; holding it to a reading measure leaves the text visibly
+     narrower than the thing it describes. */
+  .slide[data-sim="1"] .lede { max-width: none; }
 
   /* ---------- cover ---------- */
   .cover { padding-top: 4vh; }
@@ -469,6 +473,20 @@
   }
   .ctl > label b, .ctl > .ctl-label b { color: var(--ink); font-weight: 700; letter-spacing: 0; font-size: 11.5px; }
 
+  .ctl select {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--ink);
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 6px 8px;
+    width: 100%;
+    height: 32px;
+    cursor: pointer;
+  }
+  .ctl select:focus-visible { outline: 2px solid var(--plan-3); outline-offset: 1px; }
+
   input[type="range"] {
     appearance: none;
     width: 100%;
@@ -601,6 +619,7 @@
     <button class="rail-btn" data-go="6">07</button>
     <button class="rail-btn" data-go="7">08</button>
     <button class="rail-btn" data-go="8">09</button>
+    <button class="rail-btn" data-go="9">10</button>
     <button class="rail-theme" id="themeBtn" type="button">THEME</button>
   </nav>
 
@@ -632,7 +651,7 @@
       <div class="nav">
         <button type="button" data-nav="-1" disabled>← Back</button>
         <button type="button" data-nav="1">Next →</button>
-        <span class="count"><b class="cur">01</b> / 09</span>
+        <span class="count"><b class="cur">01</b> / 10</span>
       </div>
     </section>
 
@@ -662,8 +681,9 @@
         <div class="card">
           <span class="step-n">COMES OUT</span>
           <h3>Output tokens</h3>
-          <p>Reasoning, prose and code edits. They cost 5× what input costs — and they grow with
-            effort too.</p>
+          <p>Reasoning, prose and code edits, at 5× the price of input. They barely move with effort,
+            though: real calls land near 650 tokens at every level. Effort buys more calls, not longer
+            answers.</p>
         </div>
       </div>
 
@@ -671,16 +691,14 @@
         chain_cost <span class="op">=</span> calls <span class="op">×</span> (
         context <span class="op">×</span> input_price <span class="op">×</span> cache_factor
         <span class="op">+</span> output <span class="op">×</span> output_price )
-        <span class="note">cache_factor = 0.2475 — assuming 85% cache reads (0.1×), 10% fresh input (1.0×) and 5% cache writes (1.25×).</span>
+        <span class="note" id="noteCache"></span>
       </div>
 
       <div class="formula">
         task_cost <span class="op">=</span> phases <span class="op">×</span> (
-        chain_cost <span class="op">× 0.45</span>
-        <span class="op">+</span> agents <span class="op">×</span> chain_cost <span class="op">× 0.70</span> )
-        <span class="note">The coordinator spends about 45% of a full chain (plans, delegates, synthesizes);
-          each agent runs its own chain, with its own context, slightly leaner.
-          <code>solo</code> = 1 chain · <code>workflow</code> = 1 phase · <code>ultracode</code> = 3 chained phases and a minimum effort of <code>xhigh</code>.</span>
+        chain_cost <span class="op" id="fCoord">× 1.44</span>
+        <span class="op">+</span> agents <span class="op">×</span> chain_cost <span class="op" id="fAgent">× 0.55</span> )
+        <span class="note" id="noteFanout"></span>
       </div>
 
       <div class="table-wrap">
@@ -701,7 +719,7 @@
       <div class="nav">
         <button type="button" data-nav="-1">← Back</button>
         <button type="button" data-nav="1">Next →</button>
-        <span class="count"><b class="cur">02</b> / 09</span>
+        <span class="count"><b class="cur">02</b> / 10</span>
       </div>
     </section>
 
@@ -728,7 +746,7 @@
       <div class="nav">
         <button type="button" data-nav="-1">← Back</button>
         <button type="button" data-nav="1">Next →</button>
-        <span class="count"><b class="cur">03</b> / 09</span>
+        <span class="count"><b class="cur">03</b> / 10</span>
       </div>
     </section>
 
@@ -750,7 +768,7 @@
       <div class="nav">
         <button type="button" data-nav="-1">← Back</button>
         <button type="button" data-nav="1">Next →</button>
-        <span class="count"><b class="cur">04</b> / 09</span>
+        <span class="count"><b class="cur">04</b> / 10</span>
       </div>
     </section>
 
@@ -774,13 +792,41 @@
       <div class="nav">
         <button type="button" data-nav="-1">← Back</button>
         <button type="button" data-nav="1">Next →</button>
-        <span class="count"><b class="cur">05</b> / 09</span>
+        <span class="count"><b class="cur">05</b> / 10</span>
       </div>
     </section>
 
-    <!-- 06 — effort -->
+    <!-- 06 — the 5-hour window -->
     <section class="slide" data-sim="1">
       <p class="eyebrow">Simulator · chart 2</p>
+      <h2>How far into the five hours you get</h2>
+      <p class="lede">
+        The month is not what stops your day. A subscription meters a <strong>rolling five-hour
+        window</strong>, and when it closes you wait — so the question that matters at 3pm is
+        whether this pace reaches the end of the window or runs out before it. The dashed line is
+        the full five hours; a bar that reaches it means you never feel the limit.
+      </p>
+
+      <div class="chart-block">
+        <div class="chart-frame" id="frameWindow">
+          <div class="tip" id="tipWindow"></div>
+        </div>
+        <button class="table-toggle" type="button" data-table="tblWindow">Show data table</button>
+        <div class="table-wrap" id="tblWindow" hidden></div>
+      </div>
+
+      <p class="lede" id="windowNote"></p>
+
+      <div class="nav">
+        <button type="button" data-nav="-1">← Back</button>
+        <button type="button" data-nav="1">Next →</button>
+        <span class="count"><b class="cur">06</b> / 10</span>
+      </div>
+    </section>
+
+    <!-- 07 — effort -->
+    <section class="slide" data-sim="1">
+      <p class="eyebrow">Simulator · chart 3</p>
       <h2>Effort is the expensive lever</h2>
       <p class="lede">
         Same context, same model — only the effort level changes. The highlighted bar is what the
@@ -798,13 +844,13 @@
       <div class="nav">
         <button type="button" data-nav="-1">← Back</button>
         <button type="button" data-nav="1">Next →</button>
-        <span class="count"><b class="cur">06</b> / 09</span>
+        <span class="count"><b class="cur">07</b> / 10</span>
       </div>
     </section>
 
     <!-- 07 — execution mode -->
     <section class="slide" data-sim="1">
-      <p class="eyebrow">Simulator · chart 3</p>
+      <p class="eyebrow">Simulator · chart 4</p>
       <h2>One agent, a swarm, or ultracode</h2>
       <p class="lede">
         In <code>solo</code> the task runs as a single loop. A <code>workflow</code> fans out
@@ -827,13 +873,13 @@
       <div class="nav">
         <button type="button" data-nav="-1">← Back</button>
         <button type="button" data-nav="1">Next →</button>
-        <span class="count"><b class="cur">07</b> / 09</span>
+        <span class="count"><b class="cur">08</b> / 10</span>
       </div>
     </section>
 
     <!-- 08 — context -->
     <section class="slide" data-sim="1">
-      <p class="eyebrow">Simulator · chart 4</p>
+      <p class="eyebrow">Simulator · chart 5</p>
       <h2>Big context shortens the month</h2>
       <p class="lede">
         How many days each plan lasts as the average context per call grows, holding effort and
@@ -853,7 +899,7 @@
       <div class="nav">
         <button type="button" data-nav="-1">← Back</button>
         <button type="button" data-nav="1">Next →</button>
-        <span class="count"><b class="cur">08</b> / 09</span>
+        <span class="count"><b class="cur">09</b> / 10</span>
       </div>
     </section>
 
@@ -936,20 +982,67 @@
         </div>
       </div>
 
+      <div class="note-box">
+        <strong>What was measured, and what is still a guess.</strong>
+        The coefficients below come from <code>tools/measure-usage.mjs</code>, which reads the JSONL
+        transcripts Claude Code writes for every session, priced at API list rates.
+        <span id="measuredNote"></span>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <caption class="mono" style="caption-side:top;text-align:left;padding:11px 16px;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3);">Assumed before, measured now</caption>
+          <thead>
+            <tr>
+              <th>Coefficient</th>
+              <th class="num">Was assumed</th>
+              <th class="num">Measured</th>
+              <th>What the gap means</th>
+            </tr>
+          </thead>
+          <tbody id="measuredTable"></tbody>
+        </table>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <caption class="mono" style="caption-side:top;text-align:left;padding:11px 16px;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3);">Use-case profiles — measured, then run through the model</caption>
+          <thead>
+            <tr>
+              <th>Use case</th>
+              <th class="num">Context / call</th>
+              <th class="num">Calls / task</th>
+              <th class="num">Measured $ / task</th>
+              <th class="num">Modelled, high</th>
+              <th class="num">Modelled, ultracode</th>
+            </tr>
+          </thead>
+          <tbody id="profileTable"></tbody>
+        </table>
+      </div>
+
+      <p class="lede" id="profileNote"></p>
+
+      <div class="note-box warn" id="noteFanoutEvidence"></div>
+
+      <div class="note-box warn" id="noteLoop"></div>
+
       <div class="note-box warn">
         <strong>Every assumption, in one place.</strong> API list prices (Opus 5 $5/$25, Sonnet 5
-        $2/$10 introductory, Haiku 4.5 $1/$5 per million tokens); cache factor 0.2475; agent
-        fan-out with the coordinator at 0.45 and each agent at 0.70 of a full chain; ultracode at
+        $2/$10 introductory, Haiku 4.5 $1/$5 per million tokens); measured cache factor 0.1335;
+        agent fan-out with the coordinator and agent shares shown above; ultracode at
         3 phases with an <code>xhigh</code> effort floor; estimated monthly budgets of
-        $5 / $120 / $600 / $2,400 for Free / Pro / Max 5x / Max 20x; a 30-day month. None of these
-        is published as official consumption policy — they are the model's stated basis, so that
-        you can disagree with it precisely.
+        $5 / $120 / $600 / $2,400 for Free / Pro / Max 5x / Max 20x; a 30-day month.
+        The prices and the measurements are real; <strong>the four monthly budgets are not</strong> —
+        no plan publishes a dollar equivalent, and the measured data suggests a heavy Max 5x day alone
+        can exceed $450 at list prices. They are the model's stated basis, so that you can disagree
+        with it precisely.
       </div>
 
       <div class="nav">
         <button type="button" data-nav="-1">← Back</button>
         <button type="button" data-nav="1" disabled>Next →</button>
-        <span class="count"><b class="cur">09</b> / 09</span>
+        <span class="count"><b class="cur">10</b> / 10</span>
       </div>
     </section>
 
@@ -957,14 +1050,19 @@
 </div>
 
 <div class="console" id="console" aria-label="Simulation controls">
-  <div class="ctl" style="flex:1 1 200px">
-    <label for="cTasks">Tasks per day <b id="vTasks">12</b></label>
-    <input type="range" id="cTasks" min="1" max="80" step="1" value="12">
+  <div class="ctl" style="flex:1 1 210px">
+    <label for="cUseCase">Use case <b id="vUseCase">Custom</b></label>
+    <select id="cUseCase"></select>
   </div>
 
   <div class="ctl" style="flex:1 1 200px">
-    <label for="cCtx">Context per call <b id="vCtx">120k</b></label>
-    <input type="range" id="cCtx" min="10" max="500" step="10" value="120">
+    <label for="cTasks">Tasks per day <b id="vTasks">20</b></label>
+    <input type="range" id="cTasks" min="1" max="80" step="1" value="20">
+  </div>
+
+  <div class="ctl" style="flex:1 1 200px">
+    <label for="cCtx">Context per call <b id="vCtx">260k</b></label>
+    <input type="range" id="cCtx" min="10" max="500" step="10" value="260">
   </div>
 
   <div class="ctl" style="flex:1 1 250px">
@@ -983,8 +1081,8 @@
   </div>
 
   <div class="ctl" id="ctlAgents" style="flex:1 1 200px">
-    <label for="cAgents">Agents per task <b id="vAgents">8</b></label>
-    <input type="range" id="cAgents" min="2" max="32" step="1" value="8">
+    <label for="cAgents">Agents per task <b id="vAgents">11</b></label>
+    <input type="range" id="cAgents" min="2" max="32" step="1" value="11">
   </div>
 
   <button class="console-reset" type="button" id="btnReset">RESET</button>
@@ -996,12 +1094,41 @@
 
   /* ============================ model ============================ */
 
+  /* ==== measured snapshot: generated by tools/apply-measurements.mjs — do not hand-edit ==== */
+  var MEASURED = {
+    generated: "2026-08-08",
+    tasks: 1864, requests: 79377, activeDays: 32, projects: 29, cost: 14619,
+    costPerTask: { median: 2.71, mean: 7.84, p90: 16.99 },
+    cacheFactor: 0.1335, readPct: 98.2, write1hPct: 1.7,
+    ctxKPerCall: 251,
+    effort: {
+      high : { calls: 19, out: 652, ctxK: 257, tasks: 1200 },
+      xhigh: { calls: 40, out: 622, ctxK: 422, tasks: 14 }
+    },
+    coordShare: 1.37, agentShare: 0.52,
+    fanOut: {
+      requestPct: 2.8, taskPct: 3.2, subagentRequests: 2225,
+      workflows: 6, agentsPerWorkflow: 11, callsPerAgent: 23, costPerWorkflow: 13.72
+    },
+    loop: { runs: 443, costMedian: 18.89, spendPct: 57 },
+    profiles: [
+      { id: "light", label: "Light context", hint: "docs sites, small single-purpose repos", ctxK: 126, ctxKRange: [85, 142], callsPerTask: 8, outPerCall: 954, costPerTask: 0.81, tasks: 154, projects: 7 },
+      { id: "medium", label: "Working codebase", hint: "an app with conventions and history to carry", ctxK: 221, ctxKRange: [173, 241], callsPerTask: 20, outPerCall: 636, costPerTask: 3.33, tasks: 732, projects: 7 },
+      { id: "heavy", label: "Heavy context", hint: "large or unfamiliar codebases, wide multi-file work", ctxK: 324, ctxKRange: [243, 384], callsPerTask: 16, outPerCall: 718, costPerTask: 3.31, tasks: 922, projects: 6 }
+    ]
+  };
+  /* ==== end measured snapshot ==== */
+
+  /* Effort levels. high and xhigh are medians measured over 1,214 real tasks;
+     low, medium and max are extrapolated along the same ladder — nothing on
+     record ran at those levels. Output per call barely moves with effort:
+     raising effort buys more calls, not longer answers. */
   var EFFORT = [
-    { id: "low",    calls: 4,  out: 900,   use: "Short questions, one-off edits" },
-    { id: "medium", calls: 8,  out: 2000,  use: "Everyday work, guided fixes" },
-    { id: "high",   calls: 14, out: 4500,  use: "Claude Code default" },
-    { id: "xhigh",  calls: 22, out: 8000,  use: "Multi-file refactors, debugging" },
-    { id: "max",    calls: 32, out: 14000, use: "Long autonomous tasks" }
+    { id: "low",    calls: 5,  out: 720, use: "Short questions, one-off edits" },
+    { id: "medium", calls: 10, out: 690, use: "Everyday work, guided fixes" },
+    { id: "high",   calls: MEASURED.effort.high.calls,  out: MEASURED.effort.high.out,  use: "Claude Code default — measured" },
+    { id: "xhigh",  calls: MEASURED.effort.xhigh.calls, out: MEASURED.effort.xhigh.out, use: "Multi-file refactors — measured" },
+    { id: "max",    calls: 44, out: 590, use: "Long autonomous tasks" }
   ];
 
   var MODELS = [
@@ -1010,21 +1137,41 @@
     { id: "haiku45", name: "Haiku 4.5", inP: 1, outP: 5 }
   ];
 
+  /* budget    — estimated monthly allowance, the weak link: nothing measures it.
+     window    — allowance inside one rolling 5-hour window. Max 5x is anchored on
+                 measurement: the most expensive five-hour window on record cost
+                 $777 at list prices and the work carried on, so its allowance is
+                 at least that. The other three scale by the ratios the plan names
+                 imply. Nothing here is published policy.
+     The two do not multiply into each other, and they are not supposed to: a
+     subscription meters a rolling 5-hour window AND a weekly cap. The window
+     governs your afternoon; the weekly cap governs your month. */
   var PLANS = [
-    { id: "free",  name: "Free",    price: "$0",   budget: 5,    tone: "var(--plan-1)" },
-    { id: "pro",   name: "Pro",     price: "$20",  budget: 120,  tone: "var(--plan-2)" },
-    { id: "max5",  name: "Max 5x",  price: "$100", budget: 600,  tone: "var(--plan-3)" },
-    { id: "max20", name: "Max 20x", price: "$200", budget: 2400, tone: "var(--plan-4)" }
+    { id: "free",  name: "Free",    price: "$0",   budget: 5,    window: 16,   tone: "var(--plan-1)" },
+    { id: "pro",   name: "Pro",     price: "$20",  budget: 120,  window: 160,  tone: "var(--plan-2)" },
+    { id: "max5",  name: "Max 5x",  price: "$100", budget: 600,  window: 800,  tone: "var(--plan-3)" },
+    { id: "max20", name: "Max 20x", price: "$200", budget: 2400, window: 3200, tone: "var(--plan-4)" }
   ];
 
-  var CACHE_FACTOR = 0.2475;
+  var WINDOW_MINUTES = 300;
+
+  /* Work arrives in bursts, and the window meters the burst, not the average.
+     Measured across 30 active days, the busiest five hours of a day held a
+     median of 63% of that day's tasks — so a 20-task day is about 13 tasks
+     inside one window, not the 4 an even spread would suggest. */
+  var WINDOW_BURST = 0.63;
+
+  /* Mostly cache reads at 0.1x, with 1-hour writes at 2.0x — Claude Code uses the
+     1-hour TTL, which costs twice a base input token, not the 1.25x a 5-minute
+     write costs. */
+  var CACHE_FACTOR = MEASURED.cacheFactor;
   var MONTH_DAYS = 30;
 
-  /* agent fan-out:
-     the coordinator spends a fraction of a full task chain (plans, delegates, synthesizes);
-     each agent runs its own chain, with its own context, slightly leaner. */
-  var COORD_SHARE = 0.45;
-  var AGENT_SHARE = 0.70;
+  /* Agent fan-out, measured over the tasks that actually fanned out: the
+     coordinator runs longer than a solo chain, not shorter — it still does the
+     work, plus planning and synthesis. Each agent's chain is leaner. */
+  var COORD_SHARE = MEASURED.coordShare;
+  var AGENT_SHARE = MEASURED.agentShare;
 
   var MODES = [
     { id: "solo",      label: "solo",      phases: 1, floor: null },
@@ -1032,8 +1179,11 @@
     { id: "ultracode", label: "ultracode", phases: 3, floor: "xhigh" }
   ];
 
-  var state = { tasks: 12, ctxK: 120, effort: "high", model: "opus5", mode: "solo", agents: 8 };
-  var DEFAULTS = { tasks: 12, ctxK: 120, effort: "high", model: "opus5", mode: "solo", agents: 8 };
+  /* Defaults are the measured working pace, not a guess: 20 tasks a day at 260k
+     of context per call, which is where a real Opus 5 session sits once the
+     repo, the conventions and the conversation are in the window. */
+  var state = { tasks: 20, ctxK: 260, effort: "high", model: "opus5", mode: "solo", agents: 11 };
+  var DEFAULTS = { tasks: 20, ctxK: 260, effort: "high", model: "opus5", mode: "solo", agents: 11 };
 
   function effortOf(id) {
     for (var i = 0; i < EFFORT.length; i++) if (EFFORT[i].id === id) return EFFORT[i];
@@ -1082,6 +1232,17 @@
     return mo.phases * (1 + Math.max(2, agents));
   }
 
+  /* Tasks that land inside the busiest five hours of a day at this pace. */
+  function tasksInWindow(tasks) { return tasks * WINDOW_BURST; }
+
+  /* How far into a 5-hour window the pace gets before the allowance is gone.
+     Returns minutes; anything at or past WINDOW_MINUTES finishes the window. */
+  function minutesInWindow(windowBudget, ctxK, effortId, modelId, tasks, modeId, agents) {
+    var spend = costPerTask(ctxK, effortId, modelId, modeId, agents) * tasksInWindow(tasks);
+    if (spend <= 0) return Infinity;
+    return (windowBudget / spend) * WINDOW_MINUTES;
+  }
+
   function daysFor(budget, ctxK, effortId, modelId, tasks, modeId, agents) {
     var perDay = costPerTask(ctxK, effortId, modelId, modeId, agents) * tasks;
     if (perDay <= 0) return Infinity;
@@ -1115,6 +1276,108 @@
         "</td><td class=\"num\">" + nf.format(e.out) + "</td><td style=\"color:var(--ink-2)\">" + e.use + "</td></tr>";
     }
     document.getElementById("effortTable").innerHTML = rows;
+  })();
+
+  /* ============================ render: measured evidence (slide 9) ============================ */
+
+  (function () {
+    var m = MEASURED;
+    function fill(id, html) {
+      var el = document.getElementById(id);
+      if (el) el.innerHTML = html;
+    }
+
+    /* Every figure quoted in prose comes from the snapshot, so a re-measurement
+       can never leave the copy contradicting the model. */
+    fill("noteCache", "cache_factor = " + m.cacheFactor + " — <strong>measured</strong> over " +
+      int(m.requests) + " real requests: " + m.readPct + "% cache reads (0.1×) and " +
+      m.write1hPct + "% one-hour cache writes (2.0×, not the 1.25× a five-minute write costs).");
+
+    fill("fCoord", "× " + m.coordShare.toFixed(2));
+    fill("fAgent", "× " + m.agentShare.toFixed(2));
+    fill("noteFanout", "Measured, and the surprise is the coordinator: it runs about " +
+      m.coordShare.toFixed(2) + "× a solo chain, not a fraction of one — it still does the work, and pays " +
+      "for planning and synthesis on top. Each agent's chain is leaner, around " + m.agentShare.toFixed(2) +
+      ". <code>solo</code> = 1 chain · <code>workflow</code> = 1 phase · <code>ultracode</code> = 3 chained " +
+      "phases and a minimum effort of <code>xhigh</code>.");
+
+    fill("measuredNote", "Snapshot taken " + m.generated + ": <strong>" + int(m.tasks) +
+      " tasks and " + int(m.requests) + " requests over " + m.activeDays + " active days</strong> across " +
+      m.projects + " projects. A typical task cost <strong>$" + m.costPerTask.median.toFixed(2) +
+      "</strong>; the mean was $" + m.costPerTask.mean.toFixed(2) +
+      " and the 90th percentile $" + m.costPerTask.p90.toFixed(2) +
+      " — task cost is long-tailed, so the median is the honest headline.");
+
+    /* Each profile run through the page's own model, so the reader can compare
+       use cases and modes side by side against what the measurement recorded. */
+    (function () {
+      var rows = "";
+      for (var i = 0; i < (m.profiles || []).length; i++) {
+        var p = m.profiles[i];
+        var high = costPerTask(p.ctxK, "high", "opus5", "solo", 0);
+        var ultra = costPerTask(p.ctxK, "high", "opus5", "ultracode", m.fanOut.agentsPerWorkflow);
+        rows += "<tr><td><b>" + p.label + "</b><br><span style=\"color:var(--ink-3);font-size:12px\">" +
+          p.hint + " · " + p.projects + " repos, " + int(p.tasks) + " tasks</span></td>" +
+          "<td class=\"num\">" + p.ctxK + "k<br><span style=\"color:var(--ink-3);font-size:12px\">" +
+          p.ctxKRange[0] + "–" + p.ctxKRange[1] + "k</span></td>" +
+          "<td class=\"num\">" + p.callsPerTask + "</td>" +
+          "<td class=\"num\"><b>" + money(p.costPerTask) + "</b></td>" +
+          "<td class=\"num\">" + money(high) + "</td>" +
+          "<td class=\"num\">" + money(ultra) + "</td></tr>";
+      }
+      var el = document.getElementById("profileTable");
+      if (el) el.innerHTML = rows;
+    })();
+
+    fill("profileNote", "The same effort level is not the same cost. A light-context use case runs " +
+      "about a quarter of the price of a heavy one, because a call in a large or unfamiliar codebase " +
+      "drags the repo, the conventions and the conversation along with it. Pick the row that looks like " +
+      "your work, then set the console to match. The <code>ultracode</code> column is the model's " +
+      "extrapolation, not a measurement — real workflow runs came in well under it, because a subagent " +
+      "starts with a fresh, much smaller context than the thread that spawned it.");
+
+    fill("noteFanoutEvidence", "<strong>Fan-out is real, and rare.</strong> Subagents write their own " +
+      "transcripts, so they can be counted exactly: <strong>" + int(m.fanOut.subagentRequests) + " of " +
+      int(m.requests) + " requests came from subagents — " + m.fanOut.requestPct + "%</strong>, across " +
+      "<strong>" + m.fanOut.taskPct + "% of tasks</strong>. " + m.fanOut.workflows + " of those were full " +
+      "<code>ultracode</code> workflows, a median of <strong>" + m.fanOut.agentsPerWorkflow + " agents</strong> " +
+      "each at <strong>" + m.fanOut.callsPerAgent + " calls per agent</strong> and about <strong>$" +
+      Math.round(m.fanOut.costPerWorkflow) + " per workflow</strong>. Fan-out multiplies cost hard when it " +
+      "runs — it just does not run often, so treat the <code>workflow</code> and <code>ultracode</code> " +
+      "curves as the price of a mode you deliberately enter, not as a typical day.");
+
+    fill("noteLoop", m.loop
+      ? "<strong>The model still has a blind spot.</strong> An autonomous <code>/loop</code> is not a task " +
+        "in this page's sense, and there is no lever for it — yet <strong>" + int(m.loop.runs) +
+        " loop runs</strong> at a median of <strong>$" + m.loop.costMedian.toFixed(2) + "</strong> each were " +
+        "<strong>" + m.loop.spendPct + "% of all spend measured</strong>. If you run loops, the console " +
+        "understates you no matter where you drag the sliders."
+      : "<strong>No autonomous loops in this snapshot.</strong> A <code>/loop</code> run is not a task in " +
+        "this page's sense and has no lever on the console; when one shows up in a measurement it tends to " +
+        "dominate the total.");
+
+    var rows = [
+      ["cache_factor", "0.2475", m.cacheFactor.toFixed(4),
+        m.readPct + "% of context is cache reads at 0.1×, far more than the 85% assumed"],
+      ["calls / task at high", "14", String(m.effort.high.calls),
+        "median over " + nf.format(m.effort.high.tasks) + " tasks; the tail runs far longer"],
+      ["output / call at high", "4,500", nf.format(m.effort.high.out),
+        "effort adds calls, it does not make each answer longer"],
+      ["context / call", "120k", m.ctxKPerCall + "k",
+        "a real session carries the repo, the conventions and the conversation"],
+      ["coordinator share", "0.45", m.coordShare.toFixed(2),
+        "the coordinator outruns a solo chain instead of replacing it"],
+      ["agent share", "0.70", m.agentShare.toFixed(2),
+        "each agent's chain is leaner than a full one, as assumed — just more so"]
+    ];
+    var html = "";
+    for (var i = 0; i < rows.length; i++) {
+      html += "<tr><td class=\"mono\"><b>" + rows[i][0] + "</b></td><td class=\"num\">" + rows[i][1] +
+        "</td><td class=\"num\"><b>" + rows[i][2] + "</b></td><td style=\"color:var(--ink-2)\">" +
+        rows[i][3] + "</td></tr>";
+    }
+    var table = document.getElementById("measuredTable");
+    if (table) table.innerHTML = html;
   })();
 
   /* ============================ render: plan cards (slide 3) ============================ */
@@ -1260,7 +1523,142 @@
       rows + "</tbody></table>";
   }
 
-  /* ============================ chart 2 — cost by effort ============================ */
+  /* ============================ chart 2 — the 5-hour window ============================ */
+
+  /* Minutes read as duration, so a bar length from zero is meaningful here —
+     unlike charts 4 and 5, which are logarithmic and use position instead. */
+  function clock(mins) {
+    if (!isFinite(mins) || mins >= WINDOW_MINUTES) return "full 5h";
+    if (mins < 1) return "under a minute";
+    var h = Math.floor(mins / 60), m = Math.round(mins % 60);
+    if (m === 60) { h++; m = 0; }
+    return h ? h + "h " + (m < 10 ? "0" : "") + m + "m" : m + "m";
+  }
+
+  function renderWindowChart() {
+    var frame = document.getElementById("frameWindow");
+    var tip = document.getElementById("tipWindow");
+    var old = frame.querySelector("svg"); if (old) old.remove();
+
+    var W = 920, rowH = 62, top = 34, H = top + PLANS.length * rowH + 34;
+    var x0 = 148, x1 = 786;
+    var scaleMax = WINDOW_MINUTES * 1.05;
+    var per = costPerTask(state.ctxK, state.effort, state.model, state.mode, state.agents);
+    var inWindow = tasksInWindow(state.tasks);
+    var windowSpend = per * inWindow;
+
+    var data = PLANS.map(function (p) {
+      return {
+        p: p,
+        mins: minutesInWindow(p.window, state.ctxK, state.effort, state.model, state.tasks, state.mode, state.agents),
+        tasks: per > 0 ? Math.min(p.window / per, inWindow) : 0
+      };
+    });
+
+    var svg = el("svg", { viewBox: "0 0 " + W + " " + H, role: "img" });
+    svg.appendChild(el("title", {})).textContent =
+      "How far into a rolling five-hour window each plan lasts, in the current scenario";
+
+    var rx = x0 + (WINDOW_MINUTES / scaleMax) * (x1 - x0);
+    svg.appendChild(el("line", {
+      x1: rx, x2: rx, y1: top - 12, y2: H - 30,
+      stroke: "var(--line-strong)", "stroke-width": 1, "stroke-dasharray": "4 4"
+    }));
+    svg.appendChild(txt(rx, top - 18, "5h · window resets", {
+      style: AXIS_FONT, fill: "var(--ink-3)", "text-anchor": "middle"
+    }));
+
+    for (var i = 0; i < data.length; i++) {
+      (function (row, idx) {
+        var y = top + idx * rowH + 8;
+        var shown = Math.min(row.mins, WINDOW_MINUTES);
+        var w = Math.max(3, (shown / scaleMax) * (x1 - x0));
+        var survives = row.mins >= WINDOW_MINUTES;
+
+        svg.appendChild(txt(x0 - 14, y + 19, row.p.name, {
+          style: 'font-family:ui-monospace,"Cascadia Mono",Consolas,monospace;font-size:13px;font-weight:700',
+          fill: "var(--ink)", "text-anchor": "end"
+        }));
+        svg.appendChild(txt(x0 - 14, y + 34, row.p.price + "/mo", {
+          style: AXIS_FONT, fill: "var(--ink-3)", "text-anchor": "end"
+        }));
+
+        svg.appendChild(el("rect", {
+          x: x0, y: y, width: x1 - x0, height: 28, rx: 4, fill: "var(--surface-2)"
+        }));
+        svg.appendChild(el("rect", {
+          x: x0, y: y, width: w, height: 28, rx: 4, fill: row.p.tone,
+          stroke: "var(--surface)", "stroke-width": 2
+        }));
+
+        svg.appendChild(txt(x0 + w + 12, y + 19, clock(row.mins), {
+          style: 'font-family:ui-monospace,"Cascadia Mono",Consolas,monospace;font-size:13px;font-weight:700;font-variant-numeric:tabular-nums',
+          fill: "var(--ink)"
+        }));
+        if (!survives) {
+          svg.appendChild(txt(x0 + w + 12, y + 34, "then you wait " + clock(WINDOW_MINUTES - row.mins), {
+            style: AXIS_FONT, fill: "var(--ink-3)"
+          }));
+        }
+
+        var hit = el("rect", { x: x0, y: y - 6, width: x1 - x0, height: 40, fill: "transparent" });
+        svg.appendChild(hit);
+        bindTip(hit, tip, frame, function () {
+          return '<span class="tip-t">' + row.p.name + '</span>' +
+            '<span class="tip-r">Lasts <b>' + clock(row.mins) + '</b></span>' +
+            '<span class="tip-r">Tasks before the limit <b>' + int(row.tasks) +
+              " of " + int(inWindow) + '</b></span>' +
+            '<span class="tip-r">This window costs <b>' + money(windowSpend) + '</b></span>' +
+            '<span class="tip-r">Window allowance <b>' + money(row.p.window) + '</b></span>';
+        });
+      })(data[i], i);
+    }
+
+    svg.appendChild(el("line", {
+      x1: x0, x2: x1, y1: H - 30, y2: H - 30, stroke: "var(--line-strong)", "stroke-width": 1
+    }));
+    /* The zero tick is skipped: the caption below is long enough to run into it,
+       and an axis that starts at zero does not need to say so. */
+    for (var t = 1; t <= 5; t++) {
+      var xx = x0 + (t / 5) * (x1 - x0);
+      svg.appendChild(txt(xx, H - 12, Math.round((scaleMax / 5) * t) + "m", {
+        style: AXIS_FONT, fill: "var(--ink-3)",
+        "text-anchor": t === 5 ? "end" : "middle"
+      }));
+    }
+    svg.appendChild(txt(16, H - 12, "minutes into the window", {
+      style: AXIS_FONT, fill: "var(--ink-3)", "text-anchor": "start"
+    }));
+
+    frame.insertBefore(svg, tip);
+
+    var note = document.getElementById("windowNote");
+    if (note) {
+      note.innerHTML = "Work arrives in bursts, so the window meters the burst rather than the " +
+        "average: across 30 measured days the busiest five hours held a median of " +
+        Math.round(WINDOW_BURST * 100) + "% of the day's tasks. At " + state.tasks +
+        " tasks a day that is <strong>" + int(inWindow) + " tasks in the window</strong>, costing " +
+        "<strong>" + money(windowSpend) + "</strong> at list prices. " +
+        "The allowances are a stated assumption, not published policy — Max 5x is anchored on the " +
+        "most expensive five-hour window on record ($777, work uninterrupted), and the others scale " +
+        "by the ratios the plan names imply. If your own sessions stop earlier than this predicts, " +
+        "the binding limit is not your average pace: it is either a burst well above it or the " +
+        "weekly cap, which this model does not represent.";
+    }
+
+    var rows = "";
+    for (var j = 0; j < data.length; j++) {
+      var r = data[j];
+      rows += "<tr><td class=\"mono\">" + r.p.name + "</td><td class=\"num\">" + money(r.p.window) +
+        "</td><td class=\"num\">" + clock(r.mins) + "</td><td class=\"num\">" +
+        int(r.tasks) + " of " + int(inWindow) + "</td></tr>";
+    }
+    document.getElementById("tblWindow").innerHTML =
+      "<table><thead><tr><th>Plan</th><th class=\"num\">Window allowance</th><th class=\"num\">Lasts</th>" +
+      "<th class=\"num\">Tasks in window</th></tr></thead><tbody>" + rows + "</tbody></table>";
+  }
+
+  /* ============================ chart 3 — cost by effort ============================ */
 
   function renderEffortChart() {
     var frame = document.getElementById("frameEffort");
@@ -1677,6 +2075,62 @@
 
   /* ============================ controls ============================ */
 
+  /* ============================ use cases ============================
+     A measured profile is a starting point, not a mode: picking one sets the
+     context and the effort level it was measured at, and every chart follows.
+     The selection is derived from the state rather than stored alongside it, so
+     a restored link or a nudged slider always shows the truthful label. */
+
+  var USE_CASES = MEASURED.profiles || [];
+
+  /* the effort level whose call count sits closest to what the profile recorded */
+  function effortForProfile(p) {
+    var best = EFFORT[0];
+    for (var i = 0; i < EFFORT.length; i++) {
+      if (Math.abs(EFFORT[i].calls - p.callsPerTask) < Math.abs(best.calls - p.callsPerTask)) best = EFFORT[i];
+    }
+    return best.id;
+  }
+
+  function matchUseCase() {
+    for (var i = 0; i < USE_CASES.length; i++) {
+      if (USE_CASES[i].ctxK === state.ctxK && effortForProfile(USE_CASES[i]) === state.effort) return USE_CASES[i];
+    }
+    return null;
+  }
+
+  /* Called from every control, not just syncControls: dragging a slider off a
+     profile has to stop claiming you are still on it. */
+  function refreshUseCase() {
+    var hit = matchUseCase();
+    var sel = document.getElementById("cUseCase");
+    if (sel) sel.value = hit ? hit.id : "custom";
+    var label = document.getElementById("vUseCase");
+    if (label) label.textContent = hit ? hit.label : "Custom";
+  }
+
+  function buildUseCases() {
+    var sel = document.getElementById("cUseCase");
+    if (!sel) return;
+    var html = '<option value="custom">Custom — set it yourself</option>';
+    for (var i = 0; i < USE_CASES.length; i++) {
+      var p = USE_CASES[i];
+      html += '<option value="' + p.id + '">' + p.label + " — " + p.ctxK + "k, " +
+        money(p.costPerTask) + "/task measured</option>";
+    }
+    sel.innerHTML = html;
+    sel.addEventListener("change", function () {
+      for (var j = 0; j < USE_CASES.length; j++) {
+        if (USE_CASES[j].id !== this.value) continue;
+        state.ctxK = USE_CASES[j].ctxK;
+        state.effort = effortForProfile(USE_CASES[j]);
+        break;
+      }
+      syncControls();
+      renderAll();
+    });
+  }
+
   function buildSegs() {
     var se = document.getElementById("segEffort");
     se.innerHTML = EFFORT.map(function (e) {
@@ -1722,6 +2176,8 @@
     document.getElementById("vMode").textContent = state.mode;
     document.getElementById("vAgents").textContent = state.agents;
 
+    refreshUseCase();
+
     // ultracode enforces an effort floor — surface it when the floor is active
     var eff = effectiveEffort(state.effort, state.mode);
     document.getElementById("vEffort").textContent =
@@ -1753,6 +2209,7 @@
   document.getElementById("cCtx").addEventListener("input", function () {
     state.ctxK = parseInt(this.value, 10);
     document.getElementById("vCtx").textContent = tk(state.ctxK);
+    refreshUseCase();
     renderAll();
   });
   document.getElementById("cAgents").addEventListener("input", function () {
@@ -1787,7 +2244,93 @@
     }
     window.scrollTo({ top: 0, behavior: "instant" in window ? "instant" : "auto" });
     renderAll();
+    writeUrl();
   }
+
+  /* ============================ shareable state ============================
+     Every slide has its own address, and a simulation slide carries the console
+     settings with it — so a link reproduces exactly what the sender was looking
+     at. Written with replaceState so dragging a slider does not fill the back
+     button with history. */
+
+  var urlPending = 0;
+  function writeUrl() {
+    if (!window.history || !history.replaceState) return;
+    var parts = ["slide=" + (idx + 1)];
+    if (slides[idx].getAttribute("data-sim") === "1") {
+      /* A use case pins context and effort, so naming it replaces both. It says
+         nothing about pace, model or mode, so those still travel whenever they
+         differ from the defaults — a short link that quietly drops state is
+         worse than a long one. */
+      var hit = matchUseCase();
+      if (hit) {
+        parts.push("case=" + hit.id);
+      } else {
+        parts.push("case=custom", "ctx=" + state.ctxK, "effort=" + state.effort);
+      }
+      if (state.tasks !== DEFAULTS.tasks) parts.push("tasks=" + state.tasks);
+      if (state.model !== DEFAULTS.model) parts.push("model=" + state.model);
+      if (state.mode !== DEFAULTS.mode) parts.push("mode=" + state.mode);
+      if (state.mode !== "solo" && state.agents !== DEFAULTS.agents) parts.push("agents=" + state.agents);
+    }
+    var next = "#" + parts.join("&");
+    if (next !== location.hash) history.replaceState(null, "", next);
+  }
+  /* slider input fires continuously; coalesce to one write per frame */
+  function queueUrl() {
+    if (urlPending) return;
+    urlPending = requestAnimationFrame(function () { urlPending = 0; writeUrl(); });
+  }
+
+  function readUrl() {
+    var raw = location.hash.replace(/^#/, "");
+    if (!raw) return 0;
+    var q = {};
+    var pairs = raw.split("&");
+    for (var i = 0; i < pairs.length; i++) {
+      var kv = pairs[i].split("=");
+      if (kv.length === 2) q[decodeURIComponent(kv[0])] = decodeURIComponent(kv[1]);
+    }
+    var clamp = function (v, lo, hi, fallback) {
+      var n = parseInt(v, 10);
+      return isNaN(n) ? fallback : Math.max(lo, Math.min(hi, n));
+    };
+    var oneOf = function (v, list, fallback) {
+      for (var j = 0; j < list.length; j++) if (list[j].id === v) return v;
+      return fallback;
+    };
+    /* A link that carries any simulation parameter describes the whole scenario:
+       reset the rest to defaults first, or an omitted parameter silently inherits
+       whatever the current viewer happened to have set. A bare "#slide=3" carries
+       none, and leaves the console alone. */
+    if (q.case || q.ctx || q.effort || q.tasks || q.model || q.mode || q.agents) {
+      state.tasks = DEFAULTS.tasks; state.ctxK = DEFAULTS.ctxK;
+      state.effort = DEFAULTS.effort; state.model = DEFAULTS.model;
+      state.mode = DEFAULTS.mode; state.agents = DEFAULTS.agents;
+    }
+
+    /* A named use case is applied first so an explicit ctx or effort in the same
+       link still wins — that is what makes a hand-tweaked link survive. */
+    if (q.case && q.case !== "custom") {
+      for (var c = 0; c < USE_CASES.length; c++) {
+        if (USE_CASES[c].id !== q.case) continue;
+        state.ctxK = USE_CASES[c].ctxK;
+        state.effort = effortForProfile(USE_CASES[c]);
+        break;
+      }
+    }
+    if (q.tasks) state.tasks = clamp(q.tasks, 1, 80, DEFAULTS.tasks);
+    if (q.ctx) state.ctxK = clamp(q.ctx, 10, 500, DEFAULTS.ctxK);
+    if (q.agents) state.agents = clamp(q.agents, 2, 32, DEFAULTS.agents);
+    if (q.effort) state.effort = oneOf(q.effort, EFFORT, DEFAULTS.effort);
+    if (q.model) state.model = oneOf(q.model, MODELS, DEFAULTS.model);
+    if (q.mode) state.mode = oneOf(q.mode, MODES, DEFAULTS.mode);
+    syncControls();
+    /* a bare "#4" from an older link still works */
+    return clamp(q.slide, 1, slides.length, clamp(raw, 1, slides.length, 1)) - 1;
+  }
+
+  window.addEventListener("hashchange", function () { go(readUrl()); });
 
   document.addEventListener("click", function (ev) {
     var r = ev.target.closest("[data-go]");
@@ -1826,17 +2369,20 @@
   /* ============================ orchestration ============================ */
 
   function renderAll() {
+    queueUrl();
     var sim = slides[idx].getAttribute("data-sim") === "1";
     if (!sim) return;
     renderPlanCards();
     if (document.getElementById("frameDays").offsetParent !== null) renderDaysChart();
+    if (document.getElementById("frameWindow").offsetParent !== null) renderWindowChart();
     if (document.getElementById("frameEffort").offsetParent !== null) renderEffortChart();
     if (document.getElementById("frameMode").offsetParent !== null) renderModeChart();
     if (document.getElementById("frameCtx").offsetParent !== null) renderCtxChart();
   }
 
   buildSegs();
+  buildUseCases();
   syncControls();
-  go(0);
+  go(readUrl());
 })();
 </script>

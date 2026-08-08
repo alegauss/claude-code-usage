@@ -5,6 +5,9 @@ package-lock.json
 .shots/
 _site/
 
+# measured usage — real project names, prompts and spend, never publish
+.usage/
+
 # OS
 Thumbs.db
 desktop.ini

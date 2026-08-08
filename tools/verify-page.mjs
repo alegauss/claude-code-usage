@@ -1,7 +1,7 @@
 /**
  * Rendering gate for index.html.
  *
- * Walks all 9 slides in both themes and fails on anything that would ship a
+ * Walks every slide in both themes and fails on anything that would ship a
  * broken page. The palette is checked separately (tools/check-palette.mjs);
  * this script checks everything the maths cannot tell you about — layout,
  * runtime errors, and whether the interactive layer actually responds.
@@ -18,13 +18,14 @@ import path from "path";
 const SHOTS = process.argv.includes("--shots");
 const SHOT_DIR = ".shots";
 const PAGE = path.resolve("index.html");
-const SLIDES = 9;
+const SLIDES = 10;
 
 const CHARTS = [
   { slide: 4, frame: "frameDays",   tip: "tipDays",   table: "tblDays" },
-  { slide: 5, frame: "frameEffort", tip: "tipEffort", table: "tblEffort" },
-  { slide: 6, frame: "frameMode",   tip: "tipMode",   table: "tblMode" },
-  { slide: 7, frame: "frameCtx",    tip: "tipCtx",    table: "tblCtx" },
+  { slide: 5, frame: "frameWindow", tip: "tipWindow", table: "tblWindow" },
+  { slide: 6, frame: "frameEffort", tip: "tipEffort", table: "tblEffort" },
+  { slide: 7, frame: "frameMode",   tip: "tipMode",   table: "tblMode" },
+  { slide: 8, frame: "frameCtx",    tip: "tipCtx",    table: "tblCtx" },
 ];
 
 const failures = [];
@@ -101,7 +102,8 @@ for (const theme of ["light", "dark"]) {
   }
 
   // --- extremes: every mode, every effort, and the far end of every slider ---
-  await page.evaluate(() => document.querySelector('[data-go="6"]').click());
+  // parked on the execution-mode chart, the one most sensitive to these settings
+  await page.evaluate(() => document.querySelector('[data-go="7"]').click());
   for (const mode of ["solo", "workflow", "ultracode"]) {
     await page.evaluate((m) => document.querySelector(`[data-mode="${m}"]`).click(), mode);
     await page.waitForTimeout(120);
@@ -138,6 +140,6 @@ if (failures.length) {
 }
 
 console.log(
-  `\n→ ALL PAGE CHECKS PASS — ${SLIDES} slides × 2 themes, 4 charts, extremes\n` +
+  `\n→ ALL PAGE CHECKS PASS — ${SLIDES} slides × 2 themes, ${CHARTS.length} charts, extremes\n` +
   (SHOTS ? `  screenshots in ${SHOT_DIR}/\n` : "")
 );
