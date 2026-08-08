@@ -79,6 +79,7 @@
 
     --rail-w: 88px;
     --console-h: 216px;
+    --header-h: 52px;
   }
 
   @media (prefers-color-scheme: dark) {
@@ -234,8 +235,8 @@
     gap: 4px;
     align-items: center;
     position: sticky;
-    top: 0;
-    height: 100vh;
+    top: var(--header-h);
+    height: calc(100vh - var(--header-h));
   }
   .rail-mark {
     font-family: var(--font-mono);
@@ -714,6 +715,19 @@
 </head>
 
 <body>
+<header class="site-header">
+  <a class="site-brand" href="./"><svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0d1014"/><rect x="6" y="17" width="5" height="9" rx="1.5" fill="#2a78d6"/><rect x="13.5" y="11" width="5" height="15" rx="1.5" fill="#5598e7"/><rect x="21" y="5" width="5" height="21" rx="1.5" fill="#9ec5f4"/></svg><span>Claude Code usage simulator</span></a>
+  <a class="parent" href="https://alegauss.github.io/" title="alegauss — small developer tools">
+    <span class="pre">part of</span><b>alegauss</b>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M7 17 17 7"/><path d="M9 7h8v8"/>
+    </svg>
+  </a>
+  <span class="site-links">
+    <a href="https://github.com/alegauss/claude-code-usage">GitHub</a>
+  </span>
+</header>
+
 <div class="deck">
   <nav class="rail" aria-label="Slide navigation">
     <span class="rail-mark">Slides</span>

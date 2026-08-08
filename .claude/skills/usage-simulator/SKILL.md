@@ -206,3 +206,35 @@ The same `npm run check` runs in CI and **blocks the Pages deploy**.
 
 The page, the README and all tooling output are in **English**. Numbers use
 `Intl.NumberFormat("en-US")`.
+
+## The head, the header, and what ships beside the page
+
+`index.html` opens with a real doctype and `<head>`. Four things there are load
+bearing and easy to break by accident:
+
+- **`<meta name="viewport">`** — without it a phone renders at 980px and the
+  860px breakpoint never fires. Most traffic from a shared link is mobile.
+- **Absolute URLs** in `canonical`, `og:url`, `og:image`, `twitter:image`. A
+  crawler does not resolve `og.png` against the page; a relative value previews
+  as no image at all.
+- **The doctype** — the page relies on `* { box-sizing: border-box }`, so
+  standards mode is safe, but dropping the doctype silently returns it to quirks.
+- **The inline favicon**, an SVG data URI, so the page still needs no second
+  request when opened from disk.
+
+`npm run check:page` gates all of it, plus JSON-LD parsing and the sidecars.
+
+Four files deploy alongside the page because crawlers fetch them by path:
+`og.png`, `robots.txt`, `sitemap.xml`, `llms.txt`. They are listed in the
+assemble step of `.github/workflows/pages.yml` and in `SIDECARS` in the
+verifier — add a file and both must learn about it.
+
+`og.png` is **generated** (`npm run og`), never hand-edited: it reads the
+headline figures out of the `MEASURED` snapshot, so the banner cannot advertise a
+number the page has stopped showing. Re-run it after `npm run recalibrate`.
+
+The `.site-header` carries the shared alegauss identity — brand mark plus the
+`part of alegauss` pill, the same element `claude-tray` and `roadkeep` use. This
+deck navigates by rail rather than anchor links, so the header holds identity
+only. The rail sticks to `var(--header-h)`, not to 0; changing the header's
+height means changing that token, nothing else.
