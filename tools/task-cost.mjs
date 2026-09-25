@@ -85,25 +85,36 @@ export function projectPattern(repo) {
   return new RegExp(`^(${escaped.join("|")})$`, "i");
 }
 
+/* Every prefix a roadkeep.toml declares; a project with two tracks declares
+   one per table. --prefix takes a comma list for a track the file omits. */
 export function prefixOf(repo) {
   const toml = resolve(repo, "roadkeep.toml");
   if (!existsSync(toml)) return null;
-  const m = /^\s*prefix\s*=\s*"([^"]+)"/m.exec(readFileSync(toml, "utf8"));
-  return m ? m[1] : null;
+  const found = [...readFileSync(toml, "utf8").matchAll(/^\s*prefix\s*=\s*"([^"]+)"/gm)].map(m => m[1]);
+  return found.length ? [...new Set(found)].join(",") : null;
 }
+
+const alternation = prefix => `(?:${prefix.split(",").map(p => p.trim()).filter(Boolean).join("|")})`;
 
 /* The ids a commit ships are the ones in the last parenthesised group of its
    subject that names any: "docs(coverage): name SH1045-SH1050 in the matrix
    (SH758)" ships SH758 and only mentions the others. A range there, as a
    filing commit writes it, stays one key: spreading a filing over the tasks
-   it filed would charge each of them for work none of them has had yet. */
+   it filed would charge each of them for work none of them has had yet.
+   A project that writes the id first instead, "fix(engine): DD279 the relay
+   join ...", is read from the start of the description when no group names
+   one; an id anywhere else in the prose is a mention, never the task. */
 export function idsOf(subject, prefix) {
-  const id = `${prefix}\\d+`;
+  const p = alternation(prefix);
+  const id = `\\b${p}\\d+\\b`;
   const groups = [...subject.matchAll(/\(([^()]*)\)/g)].map(m => m[1]).filter(g => new RegExp(id).test(g));
-  if (!groups.length) return [];
+  if (!groups.length) {
+    const lead = new RegExp(`^[\\w-]+(?:\\([^)]*\\))?!?:\\s*(${p}\\d+)\\b`).exec(subject);
+    return lead ? [lead[1]] : [];
+  }
   const group = groups.at(-1);
   const out = [];
-  for (const m of group.matchAll(new RegExp(`${id}(?:\\s*[-\u2013]\\s*(?:${prefix})?\\d+)?`, "g"))) {
+  for (const m of group.matchAll(new RegExp(`${id}(?:\\s*[-\u2013]\\s*(?:${p})?\\d+)?`, "g"))) {
     out.push(m[0].replace(/\s+/g, "").replace("\u2013", "-"));
   }
   return [...new Set(out)];

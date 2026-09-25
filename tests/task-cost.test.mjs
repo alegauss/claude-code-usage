@@ -18,6 +18,19 @@ test("the ids a commit ships are its last parenthesised group, not the ones it m
   assert.deepEqual(idsOf("fix(utf8): read UTF8 (SH12)", "SH"), ["SH12"]);
 });
 
+test("an id that opens the description is the task when no group names one", () => {
+  assert.deepEqual(idsOf("fix(engine): DD279 the relay join takes the teardown budget too", "DD"), ["DD279"]);
+  assert.deepEqual(idsOf("docs: add DD279 for the relay join", "DD"), []);
+  assert.deepEqual(idsOf("test(WW87): photograph the menu", "DD"), [], "another project's id in the scope is not ours");
+  assert.deepEqual(idsOf("fix(x): DD5 first (DD6)", "DD"), ["DD6"], "a group wins over the lead");
+});
+
+test("a project with two tracks reads both prefixes", () => {
+  assert.deepEqual(idsOf("feat(session): send a reply on Enter (RG304)", "RK,RG"), ["RG304"]);
+  assert.deepEqual(idsOf("docs(non-goals): let a reader live under it (RK1696)", "RK,RG"), ["RK1696"]);
+  assert.deepEqual(idsOf("docs(roadmap): file two faults (RG303, RG304)", "RK,RG"), ["RG303", "RG304"]);
+});
+
 test("a filing range stays one key rather than being spread over the tasks it filed", () => {
   assert.deepEqual(idsOf("docs(backlog): file the corrections (CCF68-CCF73)", "CCF"), ["CCF68-CCF73"]);
   assert.deepEqual(idsOf("docs(roadmap): file Blocks BG and BH (SH1043-SH1069)", "SH"), ["SH1043-SH1069"]);
