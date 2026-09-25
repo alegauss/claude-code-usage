@@ -47,10 +47,11 @@ const HELP = `task-cost — session cost per backlog task, from transcripts and 
   --json <file>       also write the result as JSON
   --check <file>      compare the recent tasks with a budget file; exit 1 when over
   --top <n>           most expensive tasks to list (default 10)
+  --name <name>       what to call the repository (default: its directory)
 `;
 
 export function parseArgs(argv) {
-  const o = { roots: [], repo: null, project: null, prefix: null, since: null, until: null, json: null, check: null, top: 10 };
+  const o = { roots: [], repo: null, project: null, prefix: null, since: null, until: null, json: null, check: null, top: 10, name: null };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === "--repo") o.repo = argv[++i];
@@ -62,6 +63,7 @@ export function parseArgs(argv) {
     else if (a === "--json") o.json = argv[++i];
     else if (a === "--check") o.check = argv[++i];
     else if (a === "--top") o.top = Number(argv[++i]);
+    else if (a === "--name") o.name = argv[++i];
     else if (a === "--help" || a === "-h") o.help = true;
     else throw new Error(`unknown option: ${a}`);
   }
@@ -305,7 +307,7 @@ export async function run(argv) {
   const result = attribute(requests, commitsOf(repo), prefix);
   const summary = summarise(result);
   const verdict = opts.check ? check(result.tasks, JSON.parse(readFileSync(opts.check, "utf8"))) : null;
-  const repoName = basename(realpathSync.native(repo));
+  const repoName = opts.name || basename(realpathSync.native(repo));
   console.log(report(repoName, summary, result, verdict, opts.top));
 
   if (opts.json) {
