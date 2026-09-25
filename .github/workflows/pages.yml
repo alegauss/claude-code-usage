@@ -30,6 +30,9 @@ jobs:
       - name: Install dev dependencies
         run: npm install --no-audit --no-fund
 
+      - name: Test the measurement tools
+        run: npm test
+
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 

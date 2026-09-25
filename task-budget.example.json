@@ -1,0 +1,5 @@
+{
+  "window": 10,
+  "median": { "cost": 20, "out": 60000, "requests": 80 },
+  "growth": { "cost": 1.5, "out": 1.5 }
+}

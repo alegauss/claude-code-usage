@@ -101,6 +101,39 @@ context per call was 2.7× higher than assumed while output per call was 7× low
 so the headline cost looked plausible for the wrong reasons. With the measured
 constants the formula reproduces a real project's median task within 6%.
 
+### Cost per backlog task, and a budget on it
+
+`measure-usage` splits spend at every prompt, which calibrates the page. A
+project plans in tasks, and a task ships as a commit that names it —
+`fix(agent): … (SH1083)`. `tools/task-cost.mjs` charges every request to the
+first commit that lands after it in the same repository, and sums per task id:
+
+```bash
+npm run cost -- --repo D:/Git/viglet/shio/latest
+node tools/task-cost.mjs --repo . --since 2026-09-01 --json .usage/tasks.json
+node tools/task-cost.mjs --repo . --check task-budget.example.json
+```
+
+- **Which transcripts.** The directory Claude Code names after the path a
+  session started in, for the path given and for its real path, so a junction
+  and its target both count. `--project` overrides it.
+- **Which ids.** The last parenthesised group of the subject that names one, with
+  the prefix from the repository's `roadkeep.toml` (`--prefix` otherwise): ids
+  mentioned earlier in the subject are not the task. A commit naming two ids
+  gives each half. A filing range, `(SH1043-SH1069)`, stays one key.
+- **The budget.** `--check` reads a file like `task-budget.example.json`: a
+  ceiling on the median of the last `window` tasks, and on how much that median
+  grew against the window before. One expensive task is never judged. Exit
+  `0` within, `1` over, `2` too few tasks to say.
+- **What it cannot see.** Two sessions in one checkout at once both charge the
+  next commit; exploration that led to no commit is charged to whatever commit
+  came next (each commit's `gapHours` shows how far back it reaches).
+
+The JSON holds ids, commit hashes and token counts — never a prompt, a subject
+or a path — so an aggregate can be committed elsewhere as evidence. Both tools
+read transcripts through `tools/transcripts.mjs`, so they cannot disagree about
+what a request cost.
+
 ## Sharing a view
 
 Every slide has its own address, and the simulation slides carry the console
@@ -182,7 +215,10 @@ index.html                     the page — the whole product
 og.png                         social preview, generated
 robots.txt / sitemap.xml       indexing
 llms.txt                       project summary for LLM readers
+tools/transcripts.mjs          the one reader of local transcripts both tools share
 tools/measure-usage.mjs        reads local transcripts, reports what a task really costs
+tools/task-cost.mjs            cost per backlog task id, and a budget check on the trend
+tests/                         node:test suites (npm test)
 tools/apply-measurements.mjs   folds a measurement back into index.html
 tools/make-og.mjs              renders og.png from the measured snapshot
 tools/check-palette.mjs        colour gate (no dependencies)

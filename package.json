@@ -19,6 +19,8 @@
     "measure": "node tools/measure-usage.mjs",
     "measure:json": "node tools/measure-usage.mjs --json .usage/facts.json",
     "apply": "node tools/apply-measurements.mjs",
+    "cost": "node tools/task-cost.mjs",
+    "test": "node --test \"tests/*.test.mjs\"",
     "recalibrate": "npm run measure:json && npm run apply && npm run check",
     "og": "node tools/make-og.mjs"
   },
