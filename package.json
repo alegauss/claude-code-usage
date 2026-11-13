@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "description": "Interactive simulator estimating how long Claude Code credits last on each subscription plan",
-  "homepage": "https://alegauss.github.io/claude-code-usage/",
+  "homepage": "https://alegauss.com/claude-code-usage/",
   "repository": {
     "type": "git",
     "url": "https://github.com/alegauss/claude-code-usage.git"

@@ -121,7 +121,7 @@ const html = `<!doctype html><html><head><meta charset="utf-8"><style>
     </div>
 
     <div class="foot">
-      <span class="url">alegauss.github.io/claude-code-usage</span>
+      <span class="url">alegauss.com/claude-code-usage</span>
       <span class="tag">open source · no tracking · runs from one HTML file</span>
     </div>
   </div>

@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://alegauss.github.io/claude-code-usage/sitemap.xml
+Sitemap: https://alegauss.com/claude-code-usage/sitemap.xml

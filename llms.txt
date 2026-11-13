@@ -77,7 +77,7 @@ servers, with no per-user licence.
 
 ## Links
 
-- Site: https://alegauss.github.io/claude-code-usage/
+- Site: https://alegauss.com/claude-code-usage/
 - Source: https://github.com/alegauss/claude-code-usage
 - Licence: Apache License 2.0
 - Sponsor: https://www.viglet.org

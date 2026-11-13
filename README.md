@@ -5,7 +5,7 @@ subscription plan — Free, Pro, Max 5x, Max 20x — last under a working pace y
 tasks per day, effort level, context size per call, model, and whether the work fans
 out across agents.
 
-**→ [alegauss.github.io/claude-code-usage](https://alegauss.github.io/claude-code-usage/)**
+**→ [alegauss.com/claude-code-usage](https://alegauss.com/claude-code-usage/)**
 
 ---
 
